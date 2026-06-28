@@ -1,0 +1,117 @@
+<header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-30 relative">
+
+  <!-- Logo -->
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    </div>
+    <span class="text-lg font-bold text-gray-900">MathLearn</span>
+  </div>
+
+  <!-- Global search -->
+  <div class="flex-1 max-w-sm mx-4 hidden sm:block">
+    <div class="relative">
+      <input [(ngModel)]="searchQuery" (keyup.enter)="search()" (input)="onSearchInput()"
+        placeholder="Buscar temas, ejercicios..."
+        class="w-full pl-9 pr-4 py-1.5 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <svg class="absolute left-2.5 top-2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
+      </svg>
+      <!-- Dropdown results -->
+      <div *ngIf="searchResults && searchQuery.length >= 2"
+        class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-72 overflow-y-auto">
+        <div *ngIf="searching" class="px-4 py-3 text-sm text-gray-400 text-center">Buscando...</div>
+        <div *ngIf="!searching">
+          <div *ngIf="searchResults.topics?.length > 0">
+            <div class="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50">Temas</div>
+            <a *ngFor="let t of searchResults.topics" [routerLink]="['/topics', t.id]"
+              (click)="clearSearch()"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+              <span class="text-gray-400">📚</span> {{ t.name }}
+            </a>
+          </div>
+          <div *ngIf="searchResults.exercises?.length > 0">
+            <div class="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50">Ejercicios</div>
+            <a *ngFor="let e of searchResults.exercises" [routerLink]="['/exercises', e.id]"
+              (click)="clearSearch()"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+              <span class="text-gray-400">✏️</span> {{ e.title }}
+              <span class="ml-auto text-xs text-gray-400">{{ e.topicName }}</span>
+            </a>
+          </div>
+          <div *ngIf="!searchResults.topics?.length && !searchResults.exercises?.length"
+            class="px-4 py-3 text-sm text-gray-400 text-center">Sin resultados</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: notifications + user -->
+  <div class="flex items-center gap-3" *ngIf="user$ | async as user">
+
+    <!-- Notifications bell -->
+    <button routerLink="/progress"
+      class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+      </svg>
+    </button>
+
+    <!-- User menu -->
+    <div class="relative">
+      <button (click)="showUserMenu = !showUserMenu"
+        class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition">
+        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm">
+          {{ user.name.charAt(0).toUpperCase() }}
+        </div>
+        <div class="text-left hidden sm:block">
+          <p class="text-sm font-medium text-gray-800 leading-tight">{{ user.name }}</p>
+          <p class="text-xs text-gray-500 capitalize leading-tight">{{ user.role }}</p>
+        </div>
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <!-- Dropdown -->
+      <div *ngIf="showUserMenu"
+        class="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+        <a routerLink="/progress"
+          (click)="showUserMenu = false"
+          class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          Mi progreso
+        </a>
+        <a routerLink="/gamification"
+          (click)="showUserMenu = false"
+          class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+          Logros
+        </a>
+        <hr class="my-1 border-gray-100">
+        <button (click)="doLogout()"
+          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  </div>
+
+</header>
+
+<!-- Click outside to close -->
+<div *ngIf="showUserMenu" class="fixed inset-0 z-20" (click)="showUserMenu = false"></div>

@@ -1,0 +1,151 @@
+<div class="p-6 max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Banco de Preguntas</h1>
+    <button (click)="openCreate()"
+      class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition">
+      + Nueva Pregunta
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex gap-3 mb-4">
+    <input [(ngModel)]="searchQ" (input)="load()" placeholder="Buscar..."
+      class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    <select [(ngModel)]="filterDifficulty" (change)="load()"
+      class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <option value="">Todas las dificultades</option>
+      <option value="easy">Fácil</option>
+      <option value="medium">Medio</option>
+      <option value="hard">Difícil</option>
+    </select>
+  </div>
+
+  <div *ngIf="error" class="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">{{ error }}</div>
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div *ngIf="loading" class="p-8 text-center text-gray-400">Cargando...</div>
+    <table *ngIf="!loading" class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Contenido</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Tipo</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Dificultad</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Tema</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Usos</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let q of questions" class="border-b border-gray-100 hover:bg-gray-50">
+          <td class="px-4 py-3 max-w-xs truncate font-mono text-xs">{{ q.contentLatex }}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-0.5 rounded-full text-xs"
+              [class]="q.questionType === 'multiple_choice' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'">
+              {{ q.questionType }}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-0.5 rounded-full text-xs"
+              [class]="q.difficulty === 'easy' ? 'bg-green-100 text-green-700' : q.difficulty === 'hard' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'">
+              {{ q.difficulty }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-gray-500">{{ q.topic?.name || '—' }}</td>
+          <td class="px-4 py-3 text-gray-500">{{ q.timesUsed }}</td>
+          <td class="px-4 py-3">
+            <div class="flex gap-2">
+              <button (click)="openEdit(q)"
+                class="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition">Editar</button>
+              <button (click)="delete(q.id)"
+                class="px-2 py-1 text-xs bg-red-50 text-red-600 rounded hover:bg-red-100 transition">Eliminar</button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="questions.length === 0">
+          <td colspan="6" class="px-4 py-8 text-center text-gray-400">Sin preguntas. Crea la primera.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Form modal -->
+  <div *ngIf="showForm" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="font-semibold text-gray-900">{{ editingId ? 'Editar' : 'Nueva' }} Pregunta</h2>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Contenido (LaTeX)</label>
+          <textarea [(ngModel)]="form.contentLatex" rows="3"
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="\frac{d}{dx}..."></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+            <select [(ngModel)]="form.questionType"
+              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="multiple_choice">Opción múltiple</option>
+              <option value="open">Abierta</option>
+              <option value="true_false">Verdadero/Falso</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Dificultad</label>
+            <select [(ngModel)]="form.difficulty"
+              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="easy">Fácil</option>
+              <option value="medium">Medio</option>
+              <option value="hard">Difícil</option>
+            </select>
+          </div>
+        </div>
+        <div *ngIf="form.questionType === 'multiple_choice'" class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Opción A</label>
+            <input [(ngModel)]="form.optionA" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Opción B</label>
+            <input [(ngModel)]="form.optionB" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Opción C</label>
+            <input [(ngModel)]="form.optionC" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Opción D</label>
+            <input [(ngModel)]="form.optionD" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Respuesta Correcta</label>
+          <input [(ngModel)]="form.correctAnswer"
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="A, B, C, D o respuesta abierta" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Explicación</label>
+          <textarea [(ngModel)]="form.explanation" rows="2"
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tags (separados por coma)</label>
+          <input [(ngModel)]="form.tags"
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="algebra, derivadas, ..." />
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+        <button (click)="cancel()"
+          class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition">Cancelar</button>
+        <button (click)="save()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition">
+          {{ editingId ? 'Guardar' : 'Crear' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

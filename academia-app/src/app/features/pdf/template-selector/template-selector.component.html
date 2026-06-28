@@ -1,0 +1,67 @@
+<div class="max-w-4xl mx-auto">
+
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Generar PDF</h1>
+    <p class="text-sm text-gray-500 mt-1">Elige una plantilla para armar tu documento</p>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="flex justify-center items-center h-48">
+    <svg class="animate-spin w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  </div>
+
+  <!-- Templates grid -->
+  <div *ngIf="!loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+
+    <div *ngIf="templates.length === 0"
+      class="col-span-3 text-center py-12 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl">
+      No hay plantillas disponibles aún.
+    </div>
+
+    <button *ngFor="let t of templates"
+      (click)="select(t)"
+      class="group relative bg-white rounded-xl border-2 p-5 text-left transition duration-200 hover:shadow-md"
+      [class.border-blue-500]="selected?.id === t.id"
+      [class.shadow-md]="selected?.id === t.id"
+      [class.border-gray-100]="selected?.id !== t.id">
+
+      <!-- Selected check -->
+      <div *ngIf="selected?.id === t.id"
+        class="absolute top-3 right-3 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+
+      <!-- Template preview mock -->
+      <div class="w-full h-28 rounded-lg mb-4 flex items-center justify-center border border-gray-100"
+        [style.backgroundColor]="t.config?.primaryColor ? t.config?.primaryColor + '15' : '#f3f4f6'">
+        <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </div>
+
+      <h3 class="font-semibold text-gray-900 text-sm">{{ t.name }}</h3>
+      <p *ngIf="t.config?.header" class="text-xs text-gray-500 mt-1 truncate">{{ t.config?.header }}</p>
+    </button>
+
+  </div>
+
+  <!-- Confirm button -->
+  <div *ngIf="!loading" class="flex justify-end">
+    <button (click)="confirm()" [disabled]="!selected"
+      class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed
+        text-white font-semibold px-6 py-2.5 rounded-lg transition text-sm flex items-center gap-2">
+      Usar esta plantilla
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+  </div>
+
+</div>

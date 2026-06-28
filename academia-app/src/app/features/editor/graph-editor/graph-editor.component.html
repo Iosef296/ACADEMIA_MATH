@@ -1,0 +1,96 @@
+<div class="space-y-4">
+
+  <!-- Level selector -->
+  <div class="flex gap-2">
+    <button *ngFor="let btn of [
+        {val: 'auto', label: 'Automático', desc: 'Funciones'},
+        {val: 'template', label: 'Plantilla', desc: 'Geometría'},
+        {val: 'manual', label: 'Manual', desc: 'Canvas libre'}
+      ]"
+      (click)="setLevel(btn.val)"
+      class="flex-1 py-2.5 px-3 rounded-lg border text-sm font-medium transition text-center"
+      [class.bg-blue-600]="level === btn.val"
+      [class.text-white]="level === btn.val"
+      [class.border-blue-600]="level === btn.val"
+      [class.bg-white]="level !== btn.val"
+      [class.text-gray-700]="level !== btn.val"
+      [class.border-gray-200]="level !== btn.val"
+      [class.hover:border-blue-300]="level !== btn.val">
+      <span class="block">{{ btn.label }}</span>
+      <span class="block text-xs opacity-70">{{ btn.desc }}</span>
+    </button>
+  </div>
+
+  <!-- Level 1: Auto (Plotly function graph) -->
+  <div *ngIf="level === 'auto'" class="space-y-3">
+    <div class="flex gap-2 items-end">
+      <div class="flex-1">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Expresión (ej: sin(x), x^2, 1/x)</label>
+        <input [(ngModel)]="expression" type="text"
+          placeholder="sin(x)"
+          class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono
+            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+      </div>
+      <button (click)="renderPlot()"
+        class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition font-medium">
+        Graficar
+      </button>
+    </div>
+
+    <!-- Quick examples -->
+    <div class="flex flex-wrap gap-1.5">
+      <button *ngFor="let ex of functionExamples"
+        (click)="expression = ex.value; renderPlot()"
+        class="text-xs px-2.5 py-1 bg-gray-100 hover:bg-blue-100 hover:text-blue-700
+          rounded-full text-gray-600 transition font-mono">
+        {{ ex.label }}
+      </button>
+    </div>
+
+    <!-- Plot output -->
+    <div #plotContainer class="w-full border border-gray-100 rounded-xl overflow-hidden bg-white"></div>
+  </div>
+
+  <!-- Level 2: Template (Geometry) -->
+  <div *ngIf="level === 'template'" class="space-y-3">
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de figura</label>
+      <select [(ngModel)]="templateType" (change)="renderTemplate()"
+        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white
+          focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option *ngFor="let t of templates" [value]="t.value">{{ t.label }}</option>
+      </select>
+    </div>
+
+    <!-- Params per template -->
+    <ng-container *ngFor="let t of templates">
+      <div *ngIf="templateType === t.value" class="grid grid-cols-2 gap-3">
+        <div *ngFor="let param of t.params">
+          <label class="block text-xs font-medium text-gray-600 mb-1 capitalize">{{ param }}</label>
+          <input [(ngModel)]="templateParams[param]" type="number" min="0.1" step="0.5"
+            (change)="renderTemplate()"
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
+              focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Template preview (JSXGraph placeholder) -->
+    <div class="w-full h-[280px] border border-gray-100 rounded-xl bg-gray-50 flex items-center justify-center">
+      <div class="text-center text-gray-400">
+        <div class="text-4xl mb-2">📐</div>
+        <p class="text-sm">Vista previa del gráfico geométrico</p>
+        <p class="text-xs mt-1">{{ templateType }} — parámetros: {{ templateParams | json }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level 3: Manual canvas (Konva.js) -->
+  <div *ngIf="level === 'manual'" class="space-y-2">
+    <p class="text-xs text-gray-500">Dibuja libremente sobre el canvas.</p>
+    <div #canvasContainer
+      class="w-full border border-gray-200 rounded-xl overflow-hidden bg-white cursor-crosshair">
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,79 @@
+<div class="max-w-3xl mx-auto">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Mis recompensas</h1>
+    <p class="text-sm text-gray-500 mt-1">Descuentos y beneficios ganados</p>
+  </div>
+
+  <div *ngIf="successMsg"
+    class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">
+    ✓ {{ successMsg }}
+  </div>
+
+  <div *ngIf="loading" class="flex justify-center items-center h-48">
+    <svg class="animate-spin w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+    </svg>
+  </div>
+
+  <div *ngIf="!loading">
+
+    <!-- Available -->
+    <div class="mb-8">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Disponibles</h2>
+
+      <div *ngIf="available.length === 0"
+        class="text-center py-10 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 text-sm">
+        No tienes recompensas disponibles aún.<br>
+        <span class="text-xs mt-1 block">Completa desafíos para ganarlas.</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div *ngFor="let r of available"
+          class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex gap-4"
+          [class.opacity-50]="isExpired(r)">
+
+          <div class="text-4xl shrink-0">{{ r.icon }}</div>
+
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-gray-900">{{ r.title }}</h3>
+            <p class="text-sm text-gray-500 mt-0.5">{{ r.description }}</p>
+            <p *ngIf="r.expires_at && !isExpired(r)"
+              class="text-xs text-amber-600 mt-1">
+              Vence pronto
+            </p>
+            <p *ngIf="isExpired(r)" class="text-xs text-red-500 mt-1">Expirada</p>
+
+            <button *ngIf="!isExpired(r)"
+              (click)="use(r)" [disabled]="using === r.id"
+              class="mt-3 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400
+                text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5">
+              <svg *ngIf="using === r.id" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Canjear
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Used -->
+    <div *ngIf="used.length > 0">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Canjeadas</h2>
+      <div class="space-y-2">
+        <div *ngFor="let r of used"
+          class="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3 opacity-60">
+          <span class="text-2xl">{{ r.icon }}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-700 truncate">{{ r.title }}</p>
+          </div>
+          <span class="text-xs text-gray-400 shrink-0">Canjeada</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

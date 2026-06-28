@@ -1,0 +1,182 @@
+<!-- Loading -->
+<div *ngIf="loading" class="flex justify-center items-center h-64">
+  <svg class="animate-spin w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24">
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+  </svg>
+</div>
+
+<!-- Error -->
+<div *ngIf="!loading && error" class="text-center py-16 text-red-500">
+  {{ error }}
+  <a routerLink="/forum" class="block mt-2 text-blue-600 hover:underline text-sm">Volver al foro</a>
+</div>
+
+<div *ngIf="!loading && post" class="max-w-3xl mx-auto">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+    <a routerLink="/forum" class="hover:text-blue-600 transition">Foro</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="text-gray-900 font-medium truncate">{{ post.title }}</span>
+  </div>
+
+  <!-- Original post -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
+
+    <h1 class="text-xl font-bold text-gray-900 mb-3">{{ post.title }}</h1>
+
+    <!-- Meta -->
+    <div class="flex items-center gap-3 mb-4 flex-wrap">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600
+          flex items-center justify-center text-white font-bold text-xs">
+          {{ post.author.name.charAt(0).toUpperCase() }}
+        </div>
+        <span class="text-sm font-medium text-gray-700">{{ post.author.name }}</span>
+      </div>
+      <span class="text-gray-300">·</span>
+      <span class="text-xs text-gray-400">{{ timeAgo(post.created_at) }}</span>
+      <span *ngIf="post.topic"
+        class="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">
+        {{ post.topic.name }}
+      </span>
+      <span *ngIf="post.exercise"
+        class="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 font-medium">
+        {{ post.exercise.title }}
+      </span>
+    </div>
+
+    <!-- Body -->
+    <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{{ post.body }}</p>
+
+    <!-- Attachments -->
+    <div *ngIf="post.attachments.length > 0" class="mt-4 space-y-2">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Adjuntos</p>
+      <div class="flex flex-wrap gap-2">
+        <a *ngFor="let att of post.attachments"
+          [href]="att.url" target="_blank" rel="noopener"
+          class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200
+            rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition">
+          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+          </svg>
+          {{ att.filename }}
+        </a>
+      </div>
+
+      <!-- Image previews -->
+      <div class="flex flex-wrap gap-2 mt-2">
+        <ng-container *ngFor="let att of post.attachments">
+          <img *ngIf="isImage(att)"
+            [src]="att.url"
+            class="max-h-48 rounded-lg border border-gray-200 object-contain" />
+        </ng-container>
+      </div>
+    </div>
+
+    <!-- Upload attachment -->
+    <div class="mt-5 pt-4 border-t border-gray-100">
+      <p class="text-xs font-medium text-gray-500 mb-2">Agregar adjunto (imagen, PDF o LaTeX)</p>
+      <div class="flex items-center gap-2">
+        <label class="cursor-pointer flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300
+          rounded-lg text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          {{ selectedFile ? selectedFile.name : 'Seleccionar archivo' }}
+          <input type="file" class="hidden" accept="image/*,.pdf,.tex"
+            (change)="onFileSelected($event)" />
+        </label>
+        <button *ngIf="selectedFile" (click)="uploadAttachment()" [disabled]="uploading"
+          class="px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white
+            text-sm rounded-lg transition flex items-center gap-1.5">
+          <svg *ngIf="uploading" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          {{ uploading ? 'Subiendo...' : 'Subir' }}
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Replies -->
+  <div class="mb-4">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+      {{ post.replies.length }} respuesta{{ post.replies.length !== 1 ? 's' : '' }}
+    </h2>
+
+    <div *ngIf="post.replies.length === 0"
+      class="text-center py-8 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl">
+      Sé el primero en responder.
+    </div>
+
+    <div class="space-y-3">
+      <div *ngFor="let reply of post.replies"
+        class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+
+        <!-- Reply meta -->
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600
+            flex items-center justify-center text-white font-bold text-xs shrink-0">
+            {{ reply.author.name.charAt(0).toUpperCase() }}
+          </div>
+          <span class="text-sm font-medium text-gray-700">{{ reply.author.name }}</span>
+          <span class="text-gray-300">·</span>
+          <span class="text-xs text-gray-400">{{ timeAgo(reply.created_at) }}</span>
+        </div>
+
+        <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{{ reply.body }}</p>
+
+        <!-- Reply attachments -->
+        <div *ngIf="reply.attachments && reply.attachments.length > 0" class="mt-3 flex flex-wrap gap-2">
+          <a *ngFor="let att of reply.attachments"
+            [href]="att.url" target="_blank" rel="noopener"
+            class="flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200
+              rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition">
+            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            </svg>
+            {{ att.filename }}
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Reply form -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <h3 class="text-sm font-semibold text-gray-700 mb-3">Tu respuesta</h3>
+
+    <div *ngIf="replyError" class="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+      {{ replyError }}
+    </div>
+
+    <textarea [(ngModel)]="replyBody" rows="4"
+      placeholder="Escribe tu respuesta..."
+      class="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm resize-none
+        focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"></textarea>
+
+    <div class="flex justify-end">
+      <button (click)="sendReply()" [disabled]="replying || !replyBody.trim()"
+        class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400
+          disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5
+          rounded-lg transition flex items-center gap-2">
+        <svg *ngIf="replying" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        {{ replying ? 'Enviando...' : 'Responder' }}
+      </button>
+    </div>
+  </div>
+
+</div>

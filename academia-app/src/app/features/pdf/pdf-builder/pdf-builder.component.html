@@ -1,0 +1,256 @@
+<div class="max-w-5xl mx-auto">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Armar documento</h1>
+      <p *ngIf="template" class="text-sm text-gray-500 mt-1">Plantilla: {{ template.name }}</p>
+    </div>
+    <a routerLink="/pdf" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 transition">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Cambiar plantilla
+    </a>
+  </div>
+
+  <!-- Alert -->
+  <div *ngIf="error" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+    {{ error }}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left: Builder -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- Document title -->
+      <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Título del documento</label>
+        <input [(ngModel)]="documentTitle" type="text"
+          class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold
+            focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+
+      <!-- Sections list -->
+      <div *ngIf="sections.length === 0"
+        class="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center text-gray-400 text-sm">
+        El documento está vacío. Agrega secciones desde el panel derecho.
+      </div>
+
+      <div *ngFor="let section of sections; let i = index"
+        class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+
+        <!-- Section header -->
+        <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            {{ section.type === 'title' ? 'Título' : section.type === 'text' ? 'Texto' : 'Ejercicio' }}
+          </span>
+          <div class="flex items-center gap-1">
+            <button (click)="moveUp(i)" [disabled]="i === 0"
+              class="p-1.5 text-gray-400 hover:text-gray-700 disabled:opacity-30 hover:bg-gray-200 rounded transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+              </svg>
+            </button>
+            <button (click)="moveDown(i)" [disabled]="i === sections.length - 1"
+              class="p-1.5 text-gray-400 hover:text-gray-700 disabled:opacity-30 hover:bg-gray-200 rounded transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <button (click)="removeSection(section.id)"
+              class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Section body -->
+        <div class="p-4">
+
+          <!-- Title section -->
+          <input *ngIf="section.type === 'title'"
+            [(ngModel)]="section.content" type="text" placeholder="Título de sección..."
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold
+              focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+          <!-- Text section -->
+          <textarea *ngIf="section.type === 'text'"
+            [(ngModel)]="section.content" rows="3"
+            placeholder="Escribe texto, instrucciones, notas..."
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none
+              focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+
+          <!-- Exercise section -->
+          <div *ngIf="section.type === 'exercise'"
+            class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-800">{{ section.exerciseTitle }}</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Toolbar -->
+    <div class="space-y-4">
+
+      <!-- Add sections -->
+      <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Agregar sección</h3>
+        <div class="space-y-2">
+
+          <button (click)="addSection('title')"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200
+              hover:border-blue-300 hover:bg-blue-50 transition text-left group">
+            <div class="w-7 h-7 bg-gray-100 group-hover:bg-blue-100 rounded flex items-center justify-center shrink-0 transition">
+              <svg class="w-4 h-4 text-gray-500 group-hover:text-blue-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 6h16M4 12h8m-8 6h16" />
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-700 group-hover:text-blue-700 transition">Título</span>
+          </button>
+
+          <button (click)="addSection('text')"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200
+              hover:border-blue-300 hover:bg-blue-50 transition text-left group">
+            <div class="w-7 h-7 bg-gray-100 group-hover:bg-blue-100 rounded flex items-center justify-center shrink-0 transition">
+              <svg class="w-4 h-4 text-gray-500 group-hover:text-blue-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 6h16M4 10h16M4 14h16M4 18h8" />
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-700 group-hover:text-blue-700 transition">Texto libre</span>
+          </button>
+
+          <button (click)="showExercisePicker = true"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200
+              hover:border-purple-300 hover:bg-purple-50 transition text-left group">
+            <div class="w-7 h-7 bg-gray-100 group-hover:bg-purple-100 rounded flex items-center justify-center shrink-0 transition">
+              <svg class="w-4 h-4 text-gray-500 group-hover:text-purple-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-700 group-hover:text-purple-700 transition">Ejercicio</span>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">Resumen</h3>
+        <div class="space-y-1 text-xs text-gray-500">
+          <p>Secciones: <span class="font-medium text-gray-900">{{ sections.length }}</span></p>
+          <p>Ejercicios: <span class="font-medium text-gray-900">{{ sections | countType:'exercise' }}</span></p>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="space-y-2">
+        <button (click)="preview()" [disabled]="previewing || !sections.length"
+          class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300
+            text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium">
+          <svg *ngIf="previewing" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <svg *ngIf="!previewing" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          {{ previewing ? 'Generando...' : 'Vista previa' }}
+        </button>
+
+        <button (click)="generate()" [disabled]="generating || !sections.length"
+          class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
+            bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed
+            text-white transition text-sm font-semibold">
+          <svg *ngIf="generating" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <svg *ngIf="!generating" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          {{ generating ? 'Generando PDF...' : 'Descargar PDF' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Exercise Picker Modal -->
+<div *ngIf="showExercisePicker"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+  (click)="showExercisePicker = false">
+
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col"
+    (click)="$event.stopPropagation()">
+
+    <!-- Modal header -->
+    <div class="flex items-center justify-between p-5 border-b border-gray-100">
+      <h3 class="font-semibold text-gray-900">Seleccionar ejercicio</h3>
+      <button (click)="showExercisePicker = false"
+        class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div class="p-4 border-b border-gray-100">
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input [(ngModel)]="exerciseSearch" type="text" placeholder="Buscar ejercicio..."
+          class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm
+            focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+    </div>
+
+    <!-- Exercise list -->
+    <div class="overflow-y-auto flex-1 p-2">
+      <div *ngIf="filteredExercises.length === 0" class="text-center py-8 text-gray-400 text-sm">
+        No se encontraron ejercicios.
+      </div>
+      <button *ngFor="let ex of filteredExercises"
+        (click)="addExercise(ex)"
+        class="w-full text-left px-4 py-3 rounded-xl hover:bg-blue-50 transition flex items-center gap-3 group">
+        <div class="w-1.5 self-stretch rounded-full shrink-0"
+          [class.bg-green-400]="ex.difficulty === 'basic'"
+          [class.bg-yellow-400]="ex.difficulty === 'intermediate'"
+          [class.bg-red-400]="ex.difficulty === 'advanced'">
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-800 group-hover:text-blue-700 truncate">{{ ex.title }}</p>
+          <p class="text-xs text-gray-500">{{ ex.topic?.name }}</p>
+        </div>
+        <span class="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+          [ngClass]="difficultyColor[ex.difficulty]">
+          {{ ex.difficulty === 'basic' ? 'Básico' : ex.difficulty === 'intermediate' ? 'Intermedio' : 'Avanzado' }}
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

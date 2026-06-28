@@ -1,0 +1,34 @@
+# Java / Spring Boot
+*.class
+*.jar
+*.war
+*.ear
+*.log
+target/
+build/
+.gradle/
+out/
+*.iml
+.idea/
+*.ipr
+*.iws
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+*.env
+npm-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets
+*.p12
+*.pem
+*.key
+application-local.yml
+application-local.properties

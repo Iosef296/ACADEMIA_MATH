@@ -1,0 +1,97 @@
+<div class="max-w-4xl mx-auto">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Ejercicios</h1>
+      <p class="text-sm text-gray-500 mt-1">Practica y mejora tus habilidades</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex flex-col sm:flex-row gap-3 mb-6">
+    <div class="relative flex-1">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input [(ngModel)]="searchQuery" type="text" placeholder="Buscar ejercicio o tema..."
+        class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm
+          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+    </div>
+
+    <select [(ngModel)]="filterDifficulty"
+      class="px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+      <option value="">Todas las dificultades</option>
+      <option value="basic">Básico</option>
+      <option value="intermediate">Intermedio</option>
+      <option value="advanced">Avanzado</option>
+    </select>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+    ⚠️ {{ error }}
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="flex justify-center h-48 items-center">
+    <svg class="animate-spin w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  </div>
+
+  <!-- List -->
+  <div *ngIf="!loading">
+
+    <div *ngIf="filtered.length === 0" class="text-center py-12 text-gray-400 text-sm">
+      No se encontraron ejercicios.
+    </div>
+
+    <div class="space-y-2">
+      <a *ngFor="let ex of filtered"
+        [routerLink]="['/exercises', ex.id]"
+        class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4
+          hover:border-blue-200 hover:shadow-md transition group">
+
+        <!-- Difficulty indicator -->
+        <div class="w-1.5 self-stretch rounded-full shrink-0"
+          [class.bg-green-400]="ex.difficulty === 'basic'"
+          [class.bg-yellow-400]="ex.difficulty === 'intermediate'"
+          [class.bg-red-400]="ex.difficulty === 'advanced'">
+        </div>
+
+        <!-- Info -->
+        <div class="flex-1 min-w-0">
+          <h3 class="font-medium text-gray-900 group-hover:text-blue-700 transition truncate">
+            {{ ex.title }}
+          </h3>
+          <div class="flex items-center gap-2 mt-1 flex-wrap">
+            <span class="text-xs text-gray-500">{{ ex.topic?.name }}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+              [ngClass]="difficultyColor[ex.difficulty]">
+              {{ difficultyLabel[ex.difficulty] }}
+            </span>
+            <span *ngIf="ex.isParametric"
+              class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">
+              Paramétrico
+            </span>
+            <span *ngIf="ex.needsGraph"
+              class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+              Gráfico
+            </span>
+          </div>
+        </div>
+
+        <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition shrink-0"
+          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+
+  </div>
+</div>

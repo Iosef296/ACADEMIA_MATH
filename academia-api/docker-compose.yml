@@ -1,0 +1,23 @@
+services:
+  academia_postgres:
+    image: postgres:16
+    container_name: academia_postgres
+    environment:
+      POSTGRES_DB: academia_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - academia_pg_data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    container_name: academia_adminer
+    ports:
+      - "8092:8080"
+    depends_on:
+      - academia_postgres
+
+volumes:
+  academia_pg_data:

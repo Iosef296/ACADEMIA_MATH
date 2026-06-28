@@ -1,0 +1,85 @@
+<div class="max-w-4xl mx-auto">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Desafíos semanales</h1>
+    <p class="text-sm text-gray-500 mt-1">Completa objetivos y gana XP extra</p>
+  </div>
+
+  <div *ngIf="loading" class="flex justify-center items-center h-48">
+    <svg class="animate-spin w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+    </svg>
+  </div>
+
+  <div *ngIf="!loading" class="space-y-4">
+
+    <div *ngIf="challenges.length === 0"
+      class="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 text-sm">
+      No hay desafíos activos esta semana.
+    </div>
+
+    <div *ngFor="let c of challenges"
+      class="bg-white rounded-2xl border shadow-sm p-5 transition"
+      [class.border-green-200]="c.completed"
+      [class.border-gray-100]="!c.completed">
+
+      <div class="flex items-start justify-between gap-4 mb-3">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <h3 class="font-semibold text-gray-900">{{ c.title }}</h3>
+            <span *ngIf="c.completed"
+              class="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">
+              ✓ Completado
+            </span>
+          </div>
+          <p class="text-sm text-gray-500">{{ c.description }}</p>
+        </div>
+
+        <div class="shrink-0 text-right">
+          <div class="text-lg font-black text-purple-600">+{{ c.xp_reward }}</div>
+          <div class="text-xs text-gray-400">XP</div>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="mb-3">
+        <div class="flex justify-between text-xs text-gray-500 mb-1">
+          <span>{{ c.progress }}/{{ c.goal }}</span>
+          <span>{{ pct(c) }}%</span>
+        </div>
+        <div class="w-full bg-gray-100 rounded-full h-2.5">
+          <div class="h-2.5 rounded-full transition-all duration-700"
+            [class.bg-green-500]="c.completed"
+            [class.bg-purple-500]="!c.completed"
+            [style.width.%]="pct(c)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between">
+        <span class="text-xs text-gray-400 flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ daysLeft(c.ends_at) }} día{{ daysLeft(c.ends_at) !== 1 ? 's' : '' }} restante{{ daysLeft(c.ends_at) !== 1 ? 's' : '' }}
+        </span>
+
+        <button *ngIf="!c.submitted && pct(c) >= 100"
+          (click)="submit(c)" [disabled]="submitting === c.id"
+          class="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400
+            text-white text-sm font-semibold rounded-lg transition flex items-center gap-1.5">
+          <svg *ngIf="submitting === c.id" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          Reclamar recompensa
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>

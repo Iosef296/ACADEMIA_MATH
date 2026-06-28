@@ -1,0 +1,72 @@
+<div class="max-w-4xl mx-auto">
+
+  <!-- Header -->
+  <div class="flex items-center gap-4 mb-6">
+    <a routerLink="/progress"
+      class="text-gray-400 hover:text-gray-600 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Insignias</h1>
+      <p class="text-sm text-gray-500 mt-0.5">
+        {{ earned.length }} de {{ badges.length }} obtenidas
+      </p>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="flex justify-center items-center h-48">
+    <svg class="animate-spin w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  </div>
+
+  <div *ngIf="!loading">
+
+    <!-- Earned -->
+    <div *ngIf="earned.length > 0" class="mb-8">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Obtenidas</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <div *ngFor="let b of earned"
+          class="bg-white rounded-2xl border border-yellow-200 shadow-sm p-5 text-center
+            hover:shadow-md transition">
+          <div class="text-4xl mb-3">{{ b.icon }}</div>
+          <p class="text-sm font-bold text-gray-900">{{ b.name }}</p>
+          <p class="text-xs text-gray-500 mt-1 leading-snug">{{ b.description }}</p>
+          <p *ngIf="b.earned_at"
+            class="text-xs text-yellow-600 font-medium mt-2">
+            ✓ Obtenida
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending -->
+    <div *ngIf="pending.length > 0">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Por desbloquear</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <div *ngFor="let b of pending"
+          class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center opacity-50">
+          <div class="text-4xl mb-3 grayscale">{{ b.icon }}</div>
+          <p class="text-sm font-bold text-gray-500">{{ b.name }}</p>
+          <p class="text-xs text-gray-400 mt-1 leading-snug">{{ b.description }}</p>
+          <div class="mt-2 w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
+            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="badges.length === 0"
+      class="text-center py-12 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl">
+      No hay insignias disponibles aún.
+    </div>
+
+  </div>
+</div>

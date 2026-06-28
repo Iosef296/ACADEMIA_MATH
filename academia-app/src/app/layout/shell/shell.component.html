@@ -1,0 +1,15 @@
+<div class="flex flex-col min-h-screen bg-gray-50">
+
+  <!-- Navbar top -->
+  <app-navbar></app-navbar>
+
+  <!-- Body: sidebar + main content -->
+  <div class="flex flex-1">
+    <app-sidebar></app-sidebar>
+
+    <main class="flex-1 overflow-auto p-6">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+
+</div>

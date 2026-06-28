@@ -1,0 +1,173 @@
+<!-- Loading -->
+<div *ngIf="loading" class="flex justify-center items-center h-screen">
+  <svg class="animate-spin w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+  </svg>
+</div>
+
+<!-- Error -->
+<div *ngIf="!loading && error && !exam"
+  class="flex flex-col items-center justify-center h-screen gap-4">
+  <p class="text-red-600 font-medium">{{ error }}</p>
+  <a routerLink="/exams" class="text-sm text-blue-600 hover:underline">Volver a simulacros</a>
+</div>
+
+<!-- Exam UI -->
+<div *ngIf="!loading && exam" class="min-h-screen bg-gray-50 flex flex-col">
+
+  <!-- Top bar -->
+  <div class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+    <div class="flex items-center gap-3">
+      <span class="font-semibold text-gray-900 text-sm">{{ exam.title }}</span>
+      <span *ngIf="leftScreenCount > 0"
+        class="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-medium">
+        {{ leftScreenCount }} salida{{ leftScreenCount !== 1 ? 's' : '' }} detectada{{ leftScreenCount !== 1 ? 's' : '' }}
+      </span>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <!-- Progress -->
+      <span class="text-xs text-gray-500">
+        {{ answeredCount }}/{{ questions.length }} respondidas
+      </span>
+
+      <!-- Timer -->
+      <div *ngIf="exam.time_limit" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-sm font-bold"
+        [class.bg-red-100]="timeIsLow"
+        [class.text-red-700]="timeIsLow"
+        [class.bg-gray-100]="!timeIsLow"
+        [class.text-gray-700]="!timeIsLow">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        {{ timeFormatted }}
+      </div>
+
+      <!-- Submit -->
+      <button (click)="submit()" [disabled]="submitting"
+        class="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold
+          px-4 py-1.5 rounded-lg transition flex items-center gap-1.5">
+        <svg *ngIf="submitting" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        {{ submitting ? 'Enviando...' : 'Entregar' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Question navigator (left) -->
+    <div class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-2 overflow-y-auto">
+      <button *ngFor="let q of questions; let i = index"
+        (click)="goTo(i)"
+        class="w-9 h-9 rounded-lg text-xs font-bold transition"
+        [class.bg-blue-600]="currentIndex === i"
+        [class.text-white]="currentIndex === i"
+        [class.bg-green-100]="q.answered && currentIndex !== i"
+        [class.text-green-700]="q.answered && currentIndex !== i"
+        [class.bg-gray-100]="!q.answered && currentIndex !== i"
+        [class.text-gray-500]="!q.answered && currentIndex !== i">
+        {{ i + 1 }}
+      </button>
+    </div>
+
+    <!-- Question body -->
+    <div class="flex-1 overflow-y-auto p-6">
+      <div *ngIf="currentQuestion" class="max-w-3xl mx-auto">
+
+        <!-- Question header -->
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-sm font-semibold text-gray-500">
+            Pregunta {{ currentIndex + 1 }} de {{ questions.length }}
+          </span>
+          <span *ngIf="currentQuestion.answered"
+            class="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">
+            Respondida
+          </span>
+        </div>
+
+        <!-- Statement -->
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-5">
+          <h2 class="font-semibold text-gray-900 mb-4">{{ currentQuestion.exercise.title }}</h2>
+          <div class="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-800 leading-relaxed">
+            {{ currentQuestion.exercise.statement_latex }}
+          </div>
+        </div>
+
+        <!-- Answer area -->
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-5">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Tu respuesta (LaTeX)</label>
+          <textarea [(ngModel)]="currentQuestion.userAnswer"
+            (ngModelChange)="currentQuestion.answered = !!currentQuestion.userAnswer.trim()"
+            rows="4" placeholder="Escribe tu respuesta aquí..."
+            class="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm font-mono resize-none
+              focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </textarea>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="error" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {{ error }}
+        </div>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between">
+          <button (click)="prev()" [disabled]="currentIndex === 0"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200
+              text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Anterior
+          </button>
+
+          <button (click)="next()" [disabled]="currentIndex === questions.length - 1"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700
+              disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed
+              text-white transition text-sm font-medium">
+            Siguiente
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Confirm submit modal -->
+<div *ngIf="showConfirmSubmit"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+    <div class="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    </div>
+    <h3 class="font-bold text-gray-900 mb-2">¿Entregar el examen?</h3>
+    <p class="text-sm text-gray-500 mb-6">
+      Tienes {{ questions.length - answeredCount }} pregunta{{ questions.length - answeredCount !== 1 ? 's' : '' }}
+      sin responder. Una vez enviado no podrás modificar tus respuestas.
+    </p>
+    <div class="flex gap-3">
+      <button (click)="showConfirmSubmit = false"
+        class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700
+          hover:bg-gray-50 transition font-medium">
+        Revisar
+      </button>
+      <button (click)="confirmSubmit()"
+        class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm text-white
+          transition font-semibold">
+        Entregar igual
+      </button>
+    </div>
+  </div>
+</div>

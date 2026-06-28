@@ -1,0 +1,471 @@
+<!-- Loading -->
+<div *ngIf="loading" class="flex justify-center items-center h-64">
+  <svg class="animate-spin w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+  </svg>
+</div>
+
+<div *ngIf="!loading && exercise" class="max-w-3xl mx-auto">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+    <a routerLink="/exercises" class="hover:text-blue-600 transition">Ejercicios</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <a [routerLink]="['/topics', exercise.topic?.id]" class="hover:text-blue-600 transition">
+      {{ exercise.topic?.name }}
+    </a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="text-gray-900 font-medium">{{ exercise.title }}</span>
+  </div>
+
+  <!-- Exercise statement -->
+  <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
+    <div class="flex items-start justify-between gap-4 mb-4">
+      <h1 class="text-xl font-bold text-gray-900">{{ exercise.title }}</h1>
+      <div class="flex gap-2 shrink-0">
+        <span *ngIf="exercise.isParametric"
+          class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">
+          Paramétrico
+        </span>
+      </div>
+    </div>
+
+    <!-- LaTeX statement -->
+    <div class="bg-gray-50 rounded-lg p-4 text-sm text-gray-800 leading-relaxed overflow-x-auto">
+      <app-latex-renderer [latex]="resolvedStatement" [displayMode]="true"></app-latex-renderer>
+    </div>
+  </div>
+
+  <!-- Steps section -->
+  <div *ngIf="steps.length > 0" class="space-y-4 mb-6">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Resolución paso a paso</h2>
+
+    <div *ngFor="let step of steps; let i = index">
+
+      <!-- Locked step -->
+      <div *ngIf="!step.revealed"
+        class="bg-white rounded-xl border border-dashed border-gray-200 p-5 flex items-center gap-3 opacity-50">
+        <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-400 shrink-0">
+          {{ i + 1 }}
+        </div>
+        <div class="flex-1">
+          <div class="h-3 bg-gray-100 rounded w-48"></div>
+        </div>
+        <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+
+      <!-- Revealed step -->
+      <div *ngIf="step.revealed"
+        class="bg-white rounded-xl border shadow-sm overflow-hidden"
+        [class.border-green-200]="step.answered"
+        [class.border-blue-200]="!step.answered"
+        [class.border-gray-100]="false">
+
+        <!-- Step header -->
+        <div class="flex items-center justify-between px-5 py-3 border-b"
+          [class.border-green-100]="step.answered"
+          [class.border-blue-100]="!step.answered"
+          [class.bg-green-50]="step.answered"
+          [class.bg-blue-50]="!step.answered">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+              [class.bg-green-500]="step.answered"
+              [class.bg-blue-600]="!step.answered">
+              <span *ngIf="step.answered">✓</span>
+              <span *ngIf="!step.answered">{{ i + 1 }}</span>
+            </div>
+            <span class="text-sm font-medium"
+              [class.text-green-700]="step.answered"
+              [class.text-blue-700]="!step.answered">
+              Paso {{ i + 1 }}
+              <span *ngIf="step.answered" class="font-normal text-green-600 ml-1">— completado</span>
+            </span>
+          </div>
+          <div class="flex gap-2">
+            <span *ngIf="step.hintShown"
+              class="text-xs text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full font-medium">
+              Pista usada
+            </span>
+          </div>
+        </div>
+
+        <!-- Step body -->
+        <div class="p-5">
+
+          <!-- Warning note -->
+          <div *ngIf="step.warning"
+            class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 text-amber-800 text-sm">
+            <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            {{ step.warning }}
+          </div>
+
+          <!-- If not yet answered: student writes their answer first -->
+          <ng-container *ngIf="!step.answered">
+
+            <!-- Student answer area -->
+            <div class="mb-4">
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Tu resolución para este paso
+              </label>
+              <textarea [(ngModel)]="step.userAnswer" rows="3"
+                placeholder="Escribe tu respuesta o desarrollo aquí (puedes usar LaTeX)..."
+                class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-mono
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                [disabled]="step.solutionRevealed">
+              </textarea>
+            </div>
+
+            <!-- Hint -->
+            <div *ngIf="step.hint && !step.hintShown" class="mb-4">
+              <button (click)="showHint(step)"
+                class="text-sm text-yellow-600 hover:text-yellow-700 font-medium flex items-center gap-1.5 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                Ver pista
+              </button>
+            </div>
+            <div *ngIf="step.hintShown"
+              class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+              💡 {{ step.hint }}
+            </div>
+
+            <!-- Reveal solution button -->
+            <div *ngIf="!step.solutionRevealed" class="mb-4">
+              <button (click)="revealSolution(step)"
+                class="text-sm text-blue-600 hover:text-blue-800 font-semibold border border-blue-300
+                  hover:border-blue-500 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                Ver solución del docente
+              </button>
+            </div>
+
+            <!-- Comparison: side by side -->
+            <div *ngIf="step.solutionRevealed" class="space-y-4 mb-4">
+
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                <!-- Student answer -->
+                <div class="rounded-lg border border-gray-200 overflow-hidden">
+                  <div class="bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-600 border-b border-gray-200">
+                    Tu respuesta
+                  </div>
+                  <div class="p-3 min-h-[60px] bg-white">
+                    <app-latex-renderer
+                      *ngIf="step.userAnswer.trim()"
+                      [latex]="step.userAnswer"
+                      [displayMode]="true">
+                    </app-latex-renderer>
+                    <span *ngIf="!step.userAnswer.trim()" class="text-xs text-gray-400 italic">
+                      Sin respuesta
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Teacher solution -->
+                <div class="rounded-lg border border-blue-200 overflow-hidden">
+                  <div class="bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 border-b border-blue-200">
+                    Solución del docente
+                  </div>
+                  <div class="p-3 min-h-[60px] bg-white overflow-x-auto">
+                    <app-latex-renderer [latex]="step.contentLatex" [displayMode]="true"></app-latex-renderer>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Self-assessment -->
+              <div class="bg-gray-50 rounded-lg p-4 text-center">
+                <p class="text-sm font-medium text-gray-700 mb-3">¿Tu respuesta era correcta?</p>
+                <div class="flex justify-center gap-3">
+                  <button (click)="confirmStep(step, true)"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700
+                      text-white text-sm font-semibold rounded-lg transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Sí, lo tenía
+                  </button>
+                  <button (click)="confirmStep(step, false)"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600
+                      text-white text-sm font-semibold rounded-lg transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    No, me equivoqué
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+          </ng-container>
+
+          <!-- Answered state -->
+          <div *ngIf="step.answered" class="space-y-3">
+
+            <!-- Result badge -->
+            <div class="flex items-center gap-2 text-sm font-medium"
+              [class.text-green-700]="step.correct"
+              [class.text-red-600]="!step.correct">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path *ngIf="step.correct" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                <path *ngIf="!step.correct" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              {{ step.correct ? 'Correcto' : 'Incorrecto — revisa la solución del docente' }}
+            </div>
+
+            <!-- Show teacher solution always when answered -->
+            <div class="bg-blue-50 rounded-lg border border-blue-200 overflow-hidden">
+              <div class="bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-800 border-b border-blue-200">
+                Solución del docente — Paso {{ step.stepOrder }}
+              </div>
+              <div class="p-3 overflow-x-auto">
+                <app-latex-renderer [latex]="step.contentLatex" [displayMode]="true"></app-latex-renderer>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- No steps message -->
+  <div *ngIf="steps.length === 0"
+    class="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center text-gray-400 text-sm mb-6">
+    Este ejercicio no tiene pasos de resolución aún.
+  </div>
+
+  <!-- Completion banner -->
+  <div *ngIf="allDone && !showRating"
+    class="bg-green-50 border border-green-200 rounded-xl p-6 text-center mb-6">
+    <div class="text-3xl mb-2">🎉</div>
+    <h3 class="text-lg font-bold text-green-800">¡Ejercicio completado!</h3>
+    <p class="text-sm text-green-600 mt-1">
+      Pistas usadas: {{ hintsUsed }}
+    </p>
+    <div class="flex justify-center gap-3 mt-4">
+      <button (click)="restart()"
+        class="text-sm px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-100 transition font-medium">
+        Repetir ejercicio
+      </button>
+      <a routerLink="/exercises"
+        class="text-sm px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
+        Ver más ejercicios
+      </a>
+    </div>
+  </div>
+
+  <!-- Difficulty rating -->
+  <div *ngIf="showRating"
+    class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 text-center mb-6">
+    <h3 class="font-semibold text-gray-900 mb-1">¿Qué tan difícil te pareció?</h3>
+    <p class="text-sm text-gray-500 mb-4">Tu respuesta nos ayuda a personalizar tu aprendizaje</p>
+    <div class="flex justify-center gap-3 flex-wrap">
+      <button *ngFor="let r of ratings"
+        (click)="submitRating(r.value)"
+        class="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200
+          hover:border-blue-400 hover:bg-blue-50 transition min-w-[72px]">
+        <span class="text-2xl">{{ r.emoji }}</span>
+        <span class="text-xs font-medium text-gray-700">{{ r.label }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Micro-lesson trigger -->
+  <div *ngIf="showMicroLesson"
+    class="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-6">
+    <div class="flex items-start gap-3">
+      <div class="text-2xl shrink-0">📖</div>
+      <div>
+        <h3 class="font-semibold text-amber-900">Mini-lección recomendada</h3>
+        <p class="text-sm text-amber-700 mt-1">
+          Parece que este tema necesita un poco más de práctica. Te recomendamos revisar
+          los fundamentos antes de continuar.
+        </p>
+        <a [routerLink]="['/topics', exercise.topic?.id]"
+          class="mt-3 inline-block text-sm font-medium text-amber-800 underline hover:no-underline">
+          Revisar tema: {{ exercise.topic?.name }} →
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rating submitted -->
+  <div *ngIf="ratingSubmitted && !showMicroLesson"
+    class="bg-green-50 border border-green-200 rounded-xl p-6 text-center mb-6">
+    <p class="text-sm text-green-700 font-medium">✓ Gracias por tu valoración. ¡Sigue así!</p>
+    <div class="flex justify-center gap-3 mt-4">
+      <button (click)="restart()"
+        class="text-sm px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-100 transition font-medium">
+        Repetir
+      </button>
+      <a routerLink="/exercises"
+        class="text-sm px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
+        Más ejercicios
+      </a>
+    </div>
+  </div>
+
+
+  <!-- ── Teacher: Step Manager ──────────────────────────── -->
+  <div *ngIf="isTeacher" class="mt-8">
+
+    <button (click)="showStepManager = !showStepManager"
+      class="flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition mb-4">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+      </svg>
+      {{ showStepManager ? 'Ocultar gestión de pasos' : 'Gestionar pasos de resolución (Docente)' }}
+    </button>
+
+    <div *ngIf="showStepManager" class="bg-indigo-50 border border-indigo-200 rounded-xl p-6 space-y-5">
+
+      <!-- Alerts -->
+      <div *ngIf="stepError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{{ stepError }}</div>
+      <div *ngIf="stepSuccess" class="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">✓ {{ stepSuccess }}</div>
+
+      <!-- Existing steps -->
+      <div *ngIf="steps.length > 0" class="space-y-3">
+        <h3 class="text-sm font-semibold text-indigo-900">Pasos existentes</h3>
+
+        <div *ngFor="let step of steps"
+          class="bg-white border border-indigo-100 rounded-lg p-4 shadow-sm">
+
+          <!-- View mode -->
+          <div *ngIf="editingStepId !== step.id">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-indigo-700 mb-1">Paso {{ step.stepOrder }}</p>
+                <p class="text-sm text-gray-800 font-mono break-all">{{ step.contentLatex }}</p>
+                <p *ngIf="step.hint" class="text-xs text-yellow-700 mt-1">💡 {{ step.hint }}</p>
+                <p *ngIf="step.warning" class="text-xs text-amber-700 mt-1">⚠️ {{ step.warning }}</p>
+              </div>
+              <div class="flex gap-1 shrink-0">
+                <button (click)="startEditStep(step)"
+                  class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+                <button (click)="deleteStep(step)"
+                  class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Edit mode -->
+          <div *ngIf="editingStepId === step.id" class="space-y-3">
+            <p class="text-xs font-semibold text-indigo-700">Editando paso {{ step.stepOrder }}</p>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Contenido (LaTeX)</label>
+              <textarea [(ngModel)]="editStepForm.contentLatex" rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono
+                  focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none">
+              </textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Pista (opcional)</label>
+                <input [(ngModel)]="editStepForm.hint" type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                    focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Advertencia (opcional)</label>
+                <input [(ngModel)]="editStepForm.warning" type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                    focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+              </div>
+            </div>
+            <div class="flex gap-2 justify-end">
+              <button (click)="cancelEditStep()"
+                class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition">
+                Cancelar
+              </button>
+              <button (click)="saveEditStep(step)" [disabled]="stepSaving"
+                class="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition disabled:opacity-50">
+                {{ stepSaving ? 'Guardando...' : 'Guardar' }}
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Add new step -->
+      <div class="bg-white border border-dashed border-indigo-300 rounded-lg p-4 space-y-3">
+        <h3 class="text-sm font-semibold text-indigo-900">Agregar nuevo paso</h3>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Contenido (LaTeX)</label>
+          <textarea [(ngModel)]="newStepForm.contentLatex" rows="3"
+            placeholder="Ej: x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono
+              focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none">
+          </textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Pista (opcional)</label>
+            <input [(ngModel)]="newStepForm.hint" type="text" placeholder="Pista para el estudiante..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Advertencia (opcional)</label>
+            <input [(ngModel)]="newStepForm.warning" type="text" placeholder="Advertencia importante..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+        </div>
+        <button (click)="addStep()" [disabled]="stepSaving || !newStepForm.contentLatex.trim()"
+          class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300
+            text-white text-sm font-semibold rounded-lg transition flex items-center justify-center gap-2">
+          <svg *ngIf="stepSaving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <svg *ngIf="!stepSaving" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          {{ stepSaving ? 'Agregando...' : 'Agregar paso' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Not found -->
+<div *ngIf="!loading && !exercise" class="text-center py-16 text-gray-400">
+  Ejercicio no encontrado.
+  <a routerLink="/exercises" class="block mt-2 text-blue-600 hover:underline text-sm">Volver</a>
+</div>

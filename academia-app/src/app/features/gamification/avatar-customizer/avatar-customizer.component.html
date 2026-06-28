@@ -1,0 +1,135 @@
+<div class="max-w-3xl mx-auto">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Personalizar avatar</h1>
+    <p class="text-sm text-gray-500 mt-1">Crea tu identidad visual</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    <!-- Preview -->
+    <div class="md:col-span-1">
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center gap-4 sticky top-6">
+        <div class="w-36 h-36 rounded-full overflow-hidden ring-4 ring-gray-100"
+          [innerHTML]="avatarSvg">
+        </div>
+        <p class="text-sm font-semibold text-gray-700">Vista previa</p>
+
+        <button (click)="save()" [disabled]="saving"
+          class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white
+            text-sm font-semibold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+          <svg *ngIf="saving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <svg *ngIf="!saving && !saved" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          {{ saved ? '¡Guardado!' : saving ? 'Guardando...' : 'Guardar avatar' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div class="md:col-span-2 space-y-5">
+
+      <!-- Skin -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Tono de piel</h3>
+        <div class="flex gap-2 flex-wrap">
+          <button *ngFor="let s of options.skin"
+            (click)="set('skin', s)"
+            class="w-9 h-9 rounded-full border-2 transition"
+            [style.background-color]="s"
+            [class.border-blue-500]="config.skin === s"
+            [class.scale-110]="config.skin === s"
+            [class.border-transparent]="config.skin !== s">
+          </button>
+        </div>
+      </div>
+
+      <!-- Hair style -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Cabello</h3>
+        <div class="flex gap-2 flex-wrap">
+          <button *ngFor="let h of options.hair"
+            (click)="set('hair', h)"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium border transition capitalize"
+            [class.border-blue-500]="config.hair === h"
+            [class.bg-blue-50]="config.hair === h"
+            [class.text-blue-700]="config.hair === h"
+            [class.border-gray-200]="config.hair !== h"
+            [class.text-gray-600]="config.hair !== h">
+            {{ h === 'none' ? 'Sin cabello' : h === 'short' ? 'Corto' : h === 'long' ? 'Largo' : h === 'curly' ? 'Rizado' : 'Moño' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Hair color -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Color de cabello</h3>
+        <div class="flex gap-2 flex-wrap">
+          <button *ngFor="let c of options.hairColor"
+            (click)="set('hairColor', c)"
+            class="w-9 h-9 rounded-full border-2 transition"
+            [style.background-color]="c"
+            [class.border-blue-500]="config.hairColor === c"
+            [class.scale-110]="config.hairColor === c"
+            [class.border-transparent]="config.hairColor !== c">
+          </button>
+        </div>
+      </div>
+
+      <!-- Eyes -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Ojos</h3>
+        <div class="flex gap-2 flex-wrap">
+          <button *ngFor="let e of options.eyes"
+            (click)="set('eyes', e)"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium border transition"
+            [class.border-blue-500]="config.eyes === e"
+            [class.bg-blue-50]="config.eyes === e"
+            [class.text-blue-700]="config.eyes === e"
+            [class.border-gray-200]="config.eyes !== e"
+            [class.text-gray-600]="config.eyes !== e">
+            {{ e === 'normal' ? 'Normal' : e === 'happy' ? 'Feliz' : e === 'cool' ? 'Cool' : 'Soñoliento' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Accessory -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Accesorio</h3>
+        <div class="flex gap-2 flex-wrap">
+          <button *ngFor="let a of options.accessory"
+            (click)="set('accessory', a)"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium border transition"
+            [class.border-blue-500]="config.accessory === a"
+            [class.bg-blue-50]="config.accessory === a"
+            [class.text-blue-700]="config.accessory === a"
+            [class.border-gray-200]="config.accessory !== a"
+            [class.text-gray-600]="config.accessory !== a">
+            {{ a === 'none' ? 'Ninguno' : a === 'glasses' ? 'Lentes' : a === 'headband' ? 'Vincha' : 'Gorra' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Background -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Fondo</h3>
+        <div class="flex gap-2 flex-wrap">
+          <button *ngFor="let b of options.bg"
+            (click)="set('bg', b)"
+            class="w-9 h-9 rounded-full border-2 transition"
+            [style.background-color]="b"
+            [class.border-blue-500]="config.bg === b"
+            [class.scale-110]="config.bg === b"
+            [class.border-gray-200]="config.bg !== b">
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>

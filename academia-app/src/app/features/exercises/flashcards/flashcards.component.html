@@ -1,0 +1,74 @@
+<div class="max-w-2xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Flashcards de Repaso</h1>
+      <p class="text-sm text-gray-500 mt-1">Ejercicios donde necesitaste más ayuda</p>
+    </div>
+    <button (click)="shuffle()" *ngIf="cards.length > 1"
+      class="text-sm border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 text-gray-600">
+      🔀 Mezclar
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="flex justify-center py-20">
+    <svg class="animate-spin w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  </div>
+
+  <div *ngIf="!loading && cards.length === 0" class="text-center py-20 text-gray-400">
+    <p class="text-lg font-medium">¡Sin flashcards aún!</p>
+    <p class="text-sm mt-2">Practica ejercicios — los que encuentres difíciles aparecerán aquí.</p>
+  </div>
+
+  <div *ngIf="!loading && current" class="space-y-6">
+    <div class="text-center text-sm text-gray-500">
+      {{ currentIndex + 1 }} / {{ cards.length }}
+    </div>
+
+    <div (click)="flip()" class="bg-white border-2 border-gray-200 rounded-2xl p-8 cursor-pointer
+      min-h-64 flex flex-col items-center justify-center text-center
+      hover:border-blue-300 transition-colors select-none">
+
+      <div *ngIf="!flipped">
+        <div class="flex gap-2 justify-center mb-4">
+          <span class="text-xs px-2 py-1 rounded-full" [ngClass]="difficultyColor[current!.difficulty]">
+            {{ current!.difficulty }}
+          </span>
+          <span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+            {{ current!.topic.name }}
+          </span>
+        </div>
+        <h3 class="font-semibold text-gray-900 text-lg mb-3">{{ current!.title }}</h3>
+        <p class="text-gray-500 text-sm font-mono bg-gray-50 px-3 py-2 rounded-lg max-w-full overflow-x-auto">
+          {{ current!.contentLatex }}
+        </p>
+        <p class="text-xs text-gray-400 mt-6">Toca para ver detalles</p>
+      </div>
+
+      <div *ngIf="flipped">
+        <div class="text-4xl mb-4">📝</div>
+        <p class="text-gray-700 text-sm mb-4">Ejercicio: <strong>{{ current!.title }}</strong></p>
+        <a [routerLink]="['/exercises', current!.exerciseId]"
+          class="text-blue-600 text-sm font-medium hover:underline" (click)="$event.stopPropagation()">
+          Ver ejercicio completo →
+        </a>
+        <p *ngIf="current!.lastRating" class="text-xs text-gray-400 mt-4">
+          Último rating: {{ current!.lastRating }}
+        </p>
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-4">
+      <button (click)="prev()" [disabled]="currentIndex === 0"
+        class="px-5 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">
+        ← Anterior
+      </button>
+      <button (click)="next()" [disabled]="currentIndex === cards.length - 1"
+        class="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40">
+        Siguiente →
+      </button>
+    </div>
+  </div>
+</div>

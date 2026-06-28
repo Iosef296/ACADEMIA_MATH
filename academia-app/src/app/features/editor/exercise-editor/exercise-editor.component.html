@@ -1,0 +1,241 @@
+<div class="max-w-4xl mx-auto">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">
+        {{ isEdit ? 'Editar ejercicio' : 'Nuevo ejercicio' }}
+      </h1>
+      <p class="text-sm text-gray-500 mt-1">Crea ejercicios con pasos, gráficos y variables paramétricas</p>
+    </div>
+    <a routerLink="/exercises"
+      class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 transition">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Volver
+    </a>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="error" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+    {{ error }}
+  </div>
+  <div *ngIf="success" class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+    ✓ {{ success }}
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl">
+    <button *ngFor="let tab of [
+        {val: 'content', label: 'Contenido'},
+        {val: 'steps', label: 'Pasos (' + steps.length + ')'},
+        {val: 'variables', label: 'Variables (' + variables.length + ')'},
+        {val: 'graph', label: 'Gráfico'}
+      ]"
+      (click)="activeTab = tab.val; $any(activeTab)"
+      class="flex-1 py-2 text-sm font-medium rounded-lg transition"
+      [class.bg-white]="activeTab === tab.val"
+      [class.shadow-sm]="activeTab === tab.val"
+      [class.text-gray-900]="activeTab === tab.val"
+      [class.text-gray-500]="activeTab !== tab.val"
+      [class.hover:text-gray-700]="activeTab !== tab.val">
+      {{ tab.label }}
+    </button>
+  </div>
+
+  <!-- Tab: Content -->
+  <div *ngIf="activeTab === 'content'" class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
+
+    <!-- Title -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Título del ejercicio</label>
+      <input [(ngModel)]="title" type="text" placeholder="Ej: Resolver la ecuación cuadrática..."
+        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+    </div>
+
+    <!-- Topic -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Tema</label>
+      <select [(ngModel)]="topicId"
+        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white
+          focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option [ngValue]="null">Selecciona un tema...</option>
+        <option *ngFor="let t of topics" [ngValue]="t.id">{{ t.name }}</option>
+      </select>
+    </div>
+
+    <!-- Difficulty -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Dificultad</label>
+      <div class="flex gap-3">
+        <button *ngFor="let d of [
+            {val: 'basic', label: 'Básico', color: 'green'},
+            {val: 'intermediate', label: 'Intermedio', color: 'yellow'},
+            {val: 'advanced', label: 'Avanzado', color: 'red'}
+          ]"
+          (click)="difficulty = d.val; $any(difficulty)"
+          class="flex-1 py-2 text-sm font-medium rounded-lg border transition"
+          [class.border-green-400]="difficulty === d.val && d.color === 'green'"
+          [class.bg-green-50]="difficulty === d.val && d.color === 'green'"
+          [class.text-green-700]="difficulty === d.val && d.color === 'green'"
+          [class.border-yellow-400]="difficulty === d.val && d.color === 'yellow'"
+          [class.bg-yellow-50]="difficulty === d.val && d.color === 'yellow'"
+          [class.text-yellow-700]="difficulty === d.val && d.color === 'yellow'"
+          [class.border-red-400]="difficulty === d.val && d.color === 'red'"
+          [class.bg-red-50]="difficulty === d.val && d.color === 'red'"
+          [class.text-red-700]="difficulty === d.val && d.color === 'red'"
+          [class.border-gray-200]="difficulty !== d.val"
+          [class.text-gray-500]="difficulty !== d.val">
+          {{ d.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Flags -->
+    <div class="flex gap-6">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" [(ngModel)]="isParametric"
+          class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+        <span class="text-sm text-gray-700">Ejercicio paramétrico</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" [(ngModel)]="needsGraph"
+          class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+        <span class="text-sm text-gray-700">Incluir gráfico</span>
+      </label>
+    </div>
+
+    <!-- Statement (MathLive) -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Enunciado (LaTeX)</label>
+      <app-math-editor
+        #statementEditor
+        [initialValue]="statementLatex"
+        placeholder="Escribe el enunciado del ejercicio..."
+        (latexChange)="onStatementChange($event)">
+      </app-math-editor>
+    </div>
+
+  </div>
+
+  <!-- Tab: Steps -->
+  <div *ngIf="activeTab === 'steps'">
+    <app-step-editor
+      [steps]="steps"
+      (stepsChange)="steps = $event">
+    </app-step-editor>
+  </div>
+
+  <!-- Tab: Variables (parametric) -->
+  <div *ngIf="activeTab === 'variables'" class="space-y-4">
+
+    <div *ngIf="!isParametric" class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+      Activa la opción "Ejercicio paramétrico" en la pestaña Contenido para usar variables.
+    </div>
+
+    <ng-container *ngIf="isParametric">
+      <div *ngIf="variables.length === 0"
+        class="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 text-sm">
+        Sin variables. Agrega al menos una.
+      </div>
+
+      <div *ngFor="let v of variables; let i = index"
+        class="bg-white border border-gray-200 rounded-xl p-5 space-y-3 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-gray-700 font-mono">Variable: {{ v.name }}</span>
+          <button (click)="removeVariable(i)"
+            class="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Nombre (ej: a, b, n)</label>
+            <input [(ngModel)]="v.name" type="text" maxlength="10"
+              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono
+                focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+            <select [(ngModel)]="v.type"
+              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white
+                focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option *ngFor="let t of variableTypes" [value]="t.value">{{ t.label }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div *ngIf="v.type !== 'list'" class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Mínimo</label>
+            <input [(ngModel)]="v.min" type="number"
+              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
+                focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Máximo</label>
+            <input [(ngModel)]="v.max" type="number"
+              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
+                focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <div *ngIf="v.type === 'list'">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Valores permitidos (separados por coma)</label>
+          <input [(ngModel)]="v.allowedValues" type="text" placeholder="2, 3, 5, 7, 11"
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
+              focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Condición (opcional, ej: a !== b)</label>
+          <input [(ngModel)]="v.conditions" type="text" placeholder="a > 0 && a !== b"
+            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono
+              focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+      </div>
+
+      <button (click)="addVariable()"
+        class="w-full border-2 border-dashed border-purple-300 text-purple-600 rounded-xl py-3
+          hover:border-purple-400 hover:bg-purple-50 transition text-sm font-medium flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Agregar variable
+      </button>
+    </ng-container>
+  </div>
+
+  <!-- Tab: Graph -->
+  <div *ngIf="activeTab === 'graph'">
+    <div *ngIf="!needsGraph" class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+      Activa la opción "Incluir gráfico" en la pestaña Contenido.
+    </div>
+    <div *ngIf="needsGraph" class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-4">Editor de gráfico</h3>
+      <app-graph-editor
+        [initialConfig]="graphConfig"
+        (configChange)="onGraphConfig($event)">
+      </app-graph-editor>
+    </div>
+  </div>
+
+  <!-- Save button -->
+  <div class="mt-6 flex justify-end">
+    <button (click)="save()" [disabled]="saving"
+      class="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold
+        px-6 py-2.5 rounded-lg transition duration-200 flex items-center gap-2 text-sm">
+      <svg *ngIf="saving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      {{ saving ? 'Guardando...' : (isEdit ? 'Guardar cambios' : 'Crear ejercicio') }}
+    </button>
+  </div>
+
+</div>

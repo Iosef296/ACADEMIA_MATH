@@ -1,0 +1,69 @@
+<!-- Loading -->
+<div *ngIf="loading" class="flex justify-center items-center h-screen">
+  <svg class="animate-spin w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+  </svg>
+</div>
+
+<!-- Error -->
+<div *ngIf="!loading && error"
+  class="flex flex-col items-center justify-center h-screen gap-4 text-center px-4">
+  <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+    <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+    </svg>
+  </div>
+  <p class="text-gray-700 font-medium">{{ error }}</p>
+  <a routerLink="/live"
+    class="text-sm text-blue-600 hover:underline font-medium">
+    Volver a las sesiones
+  </a>
+</div>
+
+<!-- Live room -->
+<div *ngIf="!loading && !error && session" class="flex flex-col h-screen bg-gray-900">
+
+  <!-- Top bar -->
+  <div class="flex items-center justify-between px-5 py-3 bg-gray-800 border-b border-gray-700 shrink-0">
+    <div class="flex items-center gap-3">
+      <!-- Live badge -->
+      <span class="flex items-center gap-1.5 px-2.5 py-1 bg-red-600 rounded-full text-xs font-bold text-white">
+        <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+        EN VIVO
+      </span>
+      <div>
+        <p class="text-white font-semibold text-sm">{{ session.title }}</p>
+        <p *ngIf="session.topic" class="text-gray-400 text-xs">{{ session.topic.name }}</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-gray-400">Anfitrión: {{ session.host.name }}</span>
+      <button (click)="leave()"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700
+          text-white text-xs font-semibold rounded-lg transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        Salir
+      </button>
+    </div>
+  </div>
+
+  <!-- Jitsi container -->
+  <div class="flex-1 relative">
+    <div *ngIf="!jitsiReady"
+      class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400">
+      <svg class="animate-spin w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <p class="text-sm">Conectando a la sala...</p>
+    </div>
+    <div #jitsiContainer class="w-full h-full"></div>
+  </div>
+
+</div>
