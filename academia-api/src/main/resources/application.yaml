@@ -2,22 +2,22 @@ spring:
   application:
     name: academia-api
   datasource:
-    url: jdbc:postgresql://localhost:5435/academia_db
-    username: postgres
-    password: postgres
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5435/academia_db}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
 jwt:
-  secret: academiaSecretKeyMinimo32CaracteresAqui123456789
-  access-expiration: 900000
-  refresh-expiration: 604800000
+  secret: ${JWT_SECRET:academiaSecretKeyMinimo32CaracteresAqui123456789}
+  access-expiration: ${JWT_ACCESS_EXPIRATION:900000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
 springdoc:
   api-docs:
@@ -26,6 +26,10 @@ springdoc:
     path: /swagger-ui.html
 
 server:
-  port: 3000
+  port: ${PORT:3000}
   servlet:
     context-path: /api
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
