@@ -3,7 +3,7 @@ import { firstValueFrom, Subject } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 
 interface TopicProgress {
-  topic: { id: number; name: string };
+  topic: { id: string; name: string };
   completed: number;
   total: number;
   percentage: number;
@@ -27,17 +27,35 @@ interface ProgressSummary {
 })
 export class ProgressOverviewComponent implements OnInit, OnDestroy {
   summary: ProgressSummary | null = null;
-  loading = false;
+  loading = true;
   private destroy$ = new Subject<void>();
 
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     Promise.all([
-      firstValueFrom(this.api.get<any>('progress')),
-      firstValueFrom(this.api.get<any[]>('progress/topics')),
-    ]).then(([general, topics]) => {
-      this.summary = { ...general, topics: topics ?? [] };
+      firstValueFrom(this.api.get<any[]>('progress')),
+      firstValueFrom(this.api.get<any>('progress/streak')).catch(() => ({ current: 0, max: 0 })),
+    ]).then(([progressList, streak]) => {
+      const topics: TopicProgress[] = (progressList ?? []).map((p: any) => {
+        const total = (p.exercisesSolved ?? 0) + (p.errorCount ?? 0);
+        return {
+          topic: { id: p.topicId, name: p.topicName ?? 'Sin tema' },
+          completed: p.exercisesSolved ?? 0,
+          total: Math.max(total, 1),
+          percentage: total > 0 ? Math.round(((p.exercisesSolved ?? 0) / total) * 100) : 0,
+          errors: p.errorCount ?? 0,
+        };
+      });
+      this.summary = {
+        xp_total: (progressList ?? []).reduce((s: number, p: any) => s + (p.xp ?? 0), 0),
+        streak_current: streak?.current ?? 0,
+        streak_max: streak?.max ?? 0,
+        exercises_done: (progressList ?? []).reduce((s: number, p: any) => s + (p.exercisesSolved ?? 0), 0),
+        exercises_total: (progressList ?? []).reduce((s: number, p: any) => s + (p.exercisesSolved ?? 0) + (p.errorCount ?? 0), 0),
+        time_total: (progressList ?? []).reduce((s: number, p: any) => s + (p.timeSpent ?? 0), 0),
+        topics,
+      };
       this.loading = false;
       this.cdr.detectChanges();
     }).catch(() => {

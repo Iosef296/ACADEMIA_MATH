@@ -29,7 +29,7 @@ export class ChallengesComponent implements OnInit, OnDestroy {
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    this.api.get<Challenge[]>('challenges')
+    this.api.get<Challenge[]>('gamification/challenges')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
@@ -49,7 +49,7 @@ export class ChallengesComponent implements OnInit, OnDestroy {
   submit(challenge: Challenge): void {
     if (challenge.submitted || challenge.completed) return;
     this.submitting = challenge.id;
-    this.api.post(`challenges/${challenge.id}/submit`, {})
+    this.api.post(`gamification/challenges/${challenge.id}/submit`, {})
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {

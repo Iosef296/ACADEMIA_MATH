@@ -61,7 +61,7 @@ export class ForumListComponent implements OnInit, OnDestroy {
 
   load(): void {
     const query = this.topicFilter ? `?topicId=${this.topicFilter}` : '';
-    this.api.get<ForumPost[]>(`forum/posts${query}`)
+    this.api.get<ForumPost[]>(`forum${query}`)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
@@ -96,7 +96,7 @@ export class ForumListComponent implements OnInit, OnDestroy {
     this.error = '';
     this.saving = true;
     this.api
-      .post<any>('forum/posts', {
+      .post<any>('forum', {
         title: this.newTitle,
         body: this.newBody,
         topicId: this.topicFilter,

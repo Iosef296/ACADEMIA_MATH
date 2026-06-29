@@ -26,7 +26,7 @@ export class LiveListComponent implements OnInit, OnDestroy {
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    this.api.get<LiveSession[]>('live/sessions')
+    this.api.get<LiveSession[]>('live')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
