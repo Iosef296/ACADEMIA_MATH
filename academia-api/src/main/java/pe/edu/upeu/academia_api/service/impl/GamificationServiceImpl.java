@@ -32,16 +32,19 @@ public class GamificationServiceImpl implements GamificationService {
     private final UserRepository userRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public List<Badge> findAllBadges() {
         return badgeRepository.findAll();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<UserBadge> findMyBadges(UUID userId) {
         return userBadgeRepository.findByUserId(userId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ChallengeResponse> findActiveChallenges() {
         LocalDate today = LocalDate.now();
         return challengeRepository.findByStartDateLessThanEqualAndEndDateGreaterThanEqual(today, today)
@@ -84,6 +87,7 @@ public class GamificationServiceImpl implements GamificationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Reward> findAllRewards() {
         return rewardRepository.findAll();
     }
@@ -103,6 +107,7 @@ public class GamificationServiceImpl implements GamificationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Ranking> getRanking() {
         String week = getCurrentWeekLabel();
         return rankingRepository.findByWeekLabelOrderByScoreDesc(week, PageRequest.of(0, 50));

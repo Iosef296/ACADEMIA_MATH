@@ -32,4 +32,12 @@ export class ApiService {
     form.append(fieldName, file);
     return this.http.post<T>(`${this.base}/${path}`, form);
   }
+
+  getBlob(path: string): Observable<Blob> {
+    return this.http.get(`${this.base}/${path}`, { responseType: 'blob' });
+  }
+
+  postBlob(path: string, body: any): Observable<Blob> {
+    return this.http.post(`${this.base}/${path}`, body, { responseType: 'blob' });
+  }
 }

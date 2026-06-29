@@ -42,9 +42,13 @@ public class LiveController {
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
-    public ResponseEntity<LiveSessionResponse> updateStatus(
+    public ResponseEntity<?> updateStatus(
             @PathVariable UUID id, @RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(liveService.updateStatus(id, body.get("status")));
+        String status = body.get("status");
+        if (status == null || status.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "status requerido"));
+        }
+        return ResponseEntity.ok(liveService.updateStatus(id, status));
     }
 
     @DeleteMapping("/{id}")

@@ -13,6 +13,14 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        jdbc.batch_size: 20
+        order_updates: true
+        order_inserts: true
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
 
 jwt:
   secret: ${JWT_SECRET:academiaSecretKeyMinimo32CaracteresAqui123456789}

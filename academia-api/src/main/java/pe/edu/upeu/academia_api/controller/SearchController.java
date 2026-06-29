@@ -37,15 +37,15 @@ public class SearchController {
                 }).toList();
 
         List<Map<String, Object>> exercises = exerciseRepository.findAll().stream()
-                .filter(e -> e.getTitle().toLowerCase().contains(query.toLowerCase())
-                        || e.getContentLatex().toLowerCase().contains(query.toLowerCase()))
+                .filter(e -> (e.getTitle() != null && e.getTitle().toLowerCase().contains(query.toLowerCase()))
+                        || (e.getContentLatex() != null && e.getContentLatex().toLowerCase().contains(query.toLowerCase())))
                 .limit(10)
                 .map(e -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("id", e.getId());
                     m.put("title", e.getTitle());
                     m.put("difficulty", e.getDifficulty().name().toLowerCase());
-                    m.put("topicName", e.getTopic().getName());
+                    m.put("topic", e.getTopic() != null ? Map.of("id", e.getTopic().getId(), "name", e.getTopic().getName()) : Map.of());
                     m.put("type", "exercise");
                     return m;
                 }).toList();

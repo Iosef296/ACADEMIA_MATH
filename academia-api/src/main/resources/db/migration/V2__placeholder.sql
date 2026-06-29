@@ -1,0 +1,3 @@
+-- V1 baseline was established from the existing schema (baseline-on-migrate=true).
+-- Add future schema migrations as V3__description.sql, V4__description.sql, etc.
+-- Example: ALTER TABLE users ADD COLUMN last_login TIMESTAMP;

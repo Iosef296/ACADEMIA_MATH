@@ -34,13 +34,25 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> body) {
-        authService.forgotPassword(body.get("email"));
+        String email = body.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email requerido"));
+        }
+        authService.forgotPassword(email);
         return ResponseEntity.ok(Map.of("message", "Si el email existe, recibirás instrucciones en breve."));
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> resetPassword(@RequestBody Map<String, String> body) {
-        authService.resetPassword(body.get("token"), body.get("password"));
+        String token = body.get("token");
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Token requerido"));
+        }
+        String password = body.get("password");
+        if (password == null || password.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Contraseña requerida"));
+        }
+        authService.resetPassword(token, password);
         return ResponseEntity.ok(Map.of("message", "Contraseña actualizada exitosamente."));
     }
 

@@ -34,3 +34,4 @@ desktop.ini
 *.key
 application-local.yml
 application-local.properties
+.env

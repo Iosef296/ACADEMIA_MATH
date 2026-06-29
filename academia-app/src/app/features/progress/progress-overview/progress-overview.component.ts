@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { firstValueFrom, Subject } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 
 interface TopicProgress {
@@ -24,16 +25,17 @@ interface ProgressSummary {
   templateUrl: './progress-overview.component.html',
   standalone: false,
 })
-export class ProgressOverviewComponent implements OnInit {
+export class ProgressOverviewComponent implements OnInit, OnDestroy {
   summary: ProgressSummary | null = null;
   loading = false;
+  private destroy$ = new Subject<void>();
 
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     Promise.all([
-      this.api.get<any>('progress').toPromise(),
-      this.api.get<any[]>('progress/topics').toPromise(),
+      firstValueFrom(this.api.get<any>('progress')),
+      firstValueFrom(this.api.get<any[]>('progress/topics')),
     ]).then(([general, topics]) => {
       this.summary = { ...general, topics: topics ?? [] };
       this.loading = false;
@@ -42,6 +44,11 @@ export class ProgressOverviewComponent implements OnInit {
       this.loading = false;
       this.cdr.detectChanges();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   get timeFormatted(): string {

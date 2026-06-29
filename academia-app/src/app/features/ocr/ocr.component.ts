@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../core/services/api.service';
 
 type OcrMode = 'upload' | 'camera';
@@ -9,7 +11,7 @@ type OcrState = 'idle' | 'processing' | 'done' | 'error';
   templateUrl: './ocr.component.html',
   standalone: false,
 })
-export class OcrComponent {
+export class OcrComponent implements OnDestroy {
   mode: OcrMode = 'upload';
   state: OcrState = 'idle';
 
@@ -23,7 +25,14 @@ export class OcrComponent {
 
   copied = false;
 
+  private destroy$ = new Subject<void>();
+
   constructor(private api: ApiService) {}
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -85,6 +94,7 @@ export class OcrComponent {
       // Send to backend for LaTeX conversion
       this.api
         .upload<{ latex: string }>('ocr/extract', this.selectedFile, 'image')
+        .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (res) => {
             this.extractedLatex = res.latex;

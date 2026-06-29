@@ -31,15 +31,16 @@ public class QuestionBankController {
             @RequestParam(required = false) UUID topicId,
             @RequestParam(required = false) String difficulty,
             @RequestParam(required = false) String q) {
+        if (difficulty != null) difficulty = difficulty.toUpperCase();
         List<QuestionBank> result;
         if (q != null && !q.isBlank()) {
             result = repository.search(q.trim());
         } else if (topicId != null && difficulty != null) {
-            result = repository.findByTopicIdAndDifficulty(topicId, ExerciseDifficulty.valueOf(difficulty.toUpperCase()));
+            result = repository.findByTopicIdAndDifficulty(topicId, ExerciseDifficulty.valueOf(difficulty));
         } else if (topicId != null) {
             result = repository.findByTopicId(topicId);
         } else if (difficulty != null) {
-            result = repository.findByDifficulty(ExerciseDifficulty.valueOf(difficulty.toUpperCase()));
+            result = repository.findByDifficulty(ExerciseDifficulty.valueOf(difficulty));
         } else {
             result = repository.findAll();
         }

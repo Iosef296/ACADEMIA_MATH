@@ -1,7 +1,8 @@
 import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, firstValueFrom } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 import { selectUserRole } from '../../../store/auth/auth.selectors';
 
@@ -110,8 +111,8 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
   load(): void {
     this.loading = true;
     Promise.all([
-      this.api.get<Exercise>(`exercises/${this.exerciseId}`).toPromise(),
-      this.api.get<any[]>(`exercises/${this.exerciseId}/steps`).toPromise(),
+      firstValueFrom(this.api.get<Exercise>(`exercises/${this.exerciseId}`)),
+      firstValueFrom(this.api.get<any[]>(`exercises/${this.exerciseId}/steps`)),
     ]).then(([exercise, rawSteps]) => {
       this.exercise = exercise ?? null;
 
@@ -120,6 +121,7 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
           .get<{ values: VariableValues; content_latex: string }>(
             `exercises/${this.exerciseId}/generate`
           )
+          .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (res) => {
               this.variableValues = res.values;
@@ -200,12 +202,16 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
         hintsUsed: this.hintsUsed,
         timeSpent,
       })
-      .subscribe((res: any) => {
-        this.ratingSubmitted = true;
-        this.showRating = false;
-        if (res?.triggerMicroLesson) {
-          this.showMicroLesson = true;
-        }
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.ratingSubmitted = true;
+          this.showRating = false;
+          if (res?.triggerMicroLesson) {
+            this.showMicroLesson = true;
+          }
+        },
+        error: (err) => console.error('Error:', err),
       });
   }
 
@@ -233,19 +239,20 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
       hint: this.newStepForm.hint.trim() || null,
       warning: this.newStepForm.warning.trim() || null,
       stepOrder: this.steps.length + 1,
-    }).subscribe({
-      next: () => {
-        this.stepSaving = false;
-        this.stepSuccess = 'Paso agregado.';
-        this.newStepForm = { contentLatex: '', hint: '', warning: '' };
-        setTimeout(() => (this.stepSuccess = ''), 2500);
-        this.load();
-      },
-      error: () => {
-        this.stepSaving = false;
-        this.stepError = 'Error al agregar paso.';
-      },
-    });
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.stepSaving = false;
+          this.stepSuccess = 'Paso agregado.';
+          this.newStepForm = { contentLatex: '', hint: '', warning: '' };
+          setTimeout(() => (this.stepSuccess = ''), 2500);
+          this.load();
+        },
+        error: () => {
+          this.stepSaving = false;
+          this.stepError = 'Error al agregar paso.';
+        },
+      });
   }
 
   startEditStep(step: Step): void {
@@ -269,32 +276,35 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
       hint: this.editStepForm.hint.trim() || null,
       warning: this.editStepForm.warning.trim() || null,
       stepOrder: step.stepOrder,
-    }).subscribe({
-      next: () => {
-        this.stepSaving = false;
-        this.editingStepId = null;
-        this.stepSuccess = 'Paso actualizado.';
-        setTimeout(() => (this.stepSuccess = ''), 2500);
-        this.load();
-      },
-      error: () => {
-        this.stepSaving = false;
-        this.stepError = 'Error al actualizar paso.';
-      },
-    });
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.stepSaving = false;
+          this.editingStepId = null;
+          this.stepSuccess = 'Paso actualizado.';
+          setTimeout(() => (this.stepSuccess = ''), 2500);
+          this.load();
+        },
+        error: () => {
+          this.stepSaving = false;
+          this.stepError = 'Error al actualizar paso.';
+        },
+      });
   }
 
   deleteStep(step: Step): void {
     if (!confirm(`¿Eliminar paso ${step.stepOrder}?`)) return;
-    this.api.delete(`exercises/${this.exerciseId}/steps/${step.id}`).subscribe({
-      next: () => {
-        this.stepSuccess = 'Paso eliminado.';
-        setTimeout(() => (this.stepSuccess = ''), 2500);
-        this.load();
-      },
-      error: () => {
-        this.stepError = 'Error al eliminar paso.';
-      },
-    });
+    this.api.delete(`exercises/${this.exerciseId}/steps/${step.id}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.stepSuccess = 'Paso eliminado.';
+          setTimeout(() => (this.stepSuccess = ''), 2500);
+          this.load();
+        },
+        error: () => {
+          this.stepError = 'Error al eliminar paso.';
+        },
+      });
   }
 }

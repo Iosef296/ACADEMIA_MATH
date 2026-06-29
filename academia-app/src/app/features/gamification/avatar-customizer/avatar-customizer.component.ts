@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface AvatarConfig {
@@ -24,7 +26,7 @@ const OPTIONS = {
   templateUrl: './avatar-customizer.component.html',
   standalone: false,
 })
-export class AvatarCustomizerComponent implements OnInit {
+export class AvatarCustomizerComponent implements OnInit, OnDestroy {
   options = OPTIONS;
 
   config: AvatarConfig = {
@@ -38,17 +40,26 @@ export class AvatarCustomizerComponent implements OnInit {
 
   saving = false;
   saved = false;
+  private destroy$ = new Subject<void>();
 
   constructor(private api: ApiService) {}
 
   ngOnInit(): void {
-    this.api.get<{ avatar_config: AvatarConfig }>('users/me').subscribe({
-      next: (user) => {
-        if (user.avatar_config) {
-          this.config = { ...this.config, ...user.avatar_config };
-        }
-      },
-    });
+    this.api.get<{ avatar_config: AvatarConfig }>('users/me')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (user) => {
+          if (user.avatar_config) {
+            this.config = { ...this.config, ...user.avatar_config };
+          }
+        },
+        error: (err) => console.error('Error loading avatar:', err),
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   set(key: keyof AvatarConfig, value: string): void {
@@ -58,14 +69,16 @@ export class AvatarCustomizerComponent implements OnInit {
 
   save(): void {
     this.saving = true;
-    this.api.put('users/me/avatar', { avatar_config: this.config }).subscribe({
-      next: () => {
-        this.saving = false;
-        this.saved = true;
-        setTimeout(() => (this.saved = false), 2500);
-      },
-      error: () => { this.saving = false; },
-    });
+    this.api.put('users/me/avatar', { avatar_config: this.config })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.saving = false;
+          this.saved = true;
+          setTimeout(() => (this.saved = false), 2500);
+        },
+        error: () => { this.saving = false; },
+      });
   }
 
   // Minimal SVG avatar preview

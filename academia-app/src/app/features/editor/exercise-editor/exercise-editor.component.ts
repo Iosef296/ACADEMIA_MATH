@@ -1,11 +1,11 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { MathEditorComponent } from '../math-editor/math-editor.component';
 import { StepDraft } from '../step-editor/step-editor.component';
 import { GraphConfig } from '../graph-editor/graph-editor.component';
-import { forkJoin, from, of } from 'rxjs';
-import { concatMap, toArray, catchError } from 'rxjs/operators';
+import { Subject, forkJoin, from, of } from 'rxjs';
+import { concatMap, toArray, catchError, switchMap, takeUntil, tap } from 'rxjs/operators';
 
 interface Topic {
   id: string;
@@ -26,7 +26,7 @@ interface VariableDraft {
   templateUrl: './exercise-editor.component.html',
   standalone: false,
 })
-export class ExerciseEditorComponent implements OnInit {
+export class ExerciseEditorComponent implements OnInit, OnDestroy {
   @ViewChild('statementEditor') statementEditor!: MathEditorComponent;
 
   exerciseId: string | null = null;
@@ -58,6 +58,8 @@ export class ExerciseEditorComponent implements OnInit {
     { value: 'list', label: 'Lista de valores' },
   ];
 
+  private destroy$ = new Subject<void>();
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -65,7 +67,12 @@ export class ExerciseEditorComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.api.get<Topic[]>('topics').subscribe((t) => (this.topics = t));
+    this.api.get<Topic[]>('topics')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (t) => (this.topics = t),
+        error: (err) => console.error('Error:', err),
+      });
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -75,26 +82,41 @@ export class ExerciseEditorComponent implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadExercise(): void {
     this.loading = true;
-    this.api.get<any>(`exercises/${this.exerciseId}`).subscribe((ex) => {
-      this.title = ex.title;
-      this.statementLatex = ex.contentLatex ?? '';
-      this.difficulty = ex.difficulty ?? 'basic';
-      this.topicId = ex.topic?.id ?? null;
-      this.isParametric = ex.isParametric ?? false;
-      this.needsGraph = ex.needsGraph ?? false;
-      this.loading = false;
-    });
-    this.api.get<any[]>(`exercises/${this.exerciseId}/steps`).subscribe((steps) => {
-      this.existingStepIds = steps.map((s: any) => s.id);
-      this.steps = steps.map((s: any) => ({
-        stepOrder: s.stepOrder ?? 1,
-        contentLatex: s.contentLatex ?? '',
-        hint: s.hint ?? '',
-        warning: s.warning ?? '',
-      }));
-    });
+    this.api.get<any>(`exercises/${this.exerciseId}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (ex) => {
+          this.title = ex.title;
+          this.statementLatex = ex.contentLatex ?? '';
+          this.difficulty = ex.difficulty ?? 'basic';
+          this.topicId = ex.topic?.id ?? null;
+          this.isParametric = ex.isParametric ?? false;
+          this.needsGraph = ex.needsGraph ?? false;
+          this.loading = false;
+        },
+        error: (err) => console.error('Error:', err),
+      });
+    this.api.get<any[]>(`exercises/${this.exerciseId}/steps`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (steps) => {
+          this.existingStepIds = steps.map((s: any) => s.id);
+          this.steps = steps.map((s: any) => ({
+            stepOrder: s.stepOrder ?? 1,
+            contentLatex: s.contentLatex ?? '',
+            hint: s.hint ?? '',
+            warning: s.warning ?? '',
+          }));
+        },
+        error: (err) => console.error('Error:', err),
+      });
   }
 
   onStatementChange(latex: string): void {
@@ -145,13 +167,13 @@ export class ExerciseEditorComponent implements OnInit {
       ? this.api.put<any>(`exercises/${this.exerciseId}`, payload)
       : this.api.post<any>('exercises', payload);
 
-    req$.subscribe({
-      next: (res: any) => {
+    req$.pipe(
+      switchMap((res: any) => {
         const exId = this.exerciseId ?? res.id;
 
         if (this.steps.length === 0) {
           this.finalize(exId);
-          return;
+          return of(null);
         }
 
         // For edit: delete existing steps first, then recreate
@@ -162,20 +184,25 @@ export class ExerciseEditorComponent implements OnInit {
             )
           : of([]);
 
-        deleteAll$.subscribe(() => {
-          from(this.steps).pipe(
-            concatMap((step) =>
-              this.api.post(`exercises/${exId}/steps`, {
-                contentLatex: step.contentLatex,
-                hint: step.hint || null,
-                warning: step.warning || null,
-                stepOrder: step.stepOrder,
-              }).pipe(catchError(() => of(null)))
-            ),
-            toArray(),
-          ).subscribe(() => this.finalize(exId));
-        });
-      },
+        return deleteAll$.pipe(
+          switchMap(() =>
+            from(this.steps).pipe(
+              concatMap((step) =>
+                this.api.post(`exercises/${exId}/steps`, {
+                  contentLatex: step.contentLatex,
+                  hint: step.hint || null,
+                  warning: step.warning || null,
+                  stepOrder: step.stepOrder,
+                }).pipe(catchError(() => of(null)))
+              ),
+              toArray(),
+            )
+          ),
+          tap(() => this.finalize(exId)),
+        );
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
       error: () => {
         this.saving = false;
         this.error = 'Error al guardar. Verifica que tienes permisos.';

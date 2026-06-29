@@ -71,7 +71,7 @@ public class LiveServiceImpl implements LiveService {
         return LiveSessionResponse.builder()
                 .id(s.getId()).title(s.getTitle())
                 .jitsiRoomId(s.getJitsiRoomId())
-                .teacherName(s.getTeacher().getName())
+                .teacherName(s.getTeacher() != null ? s.getTeacher().getName() : null)
                 .startTime(s.getStartTime()).endTime(s.getEndTime())
                 .status(s.getStatus()).createdAt(s.getCreatedAt())
                 .build();

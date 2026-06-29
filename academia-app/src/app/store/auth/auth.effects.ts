@@ -72,8 +72,9 @@ export class AuthEffects {
         const token = this.storage.get<string>('access_token');
         const refresh = this.storage.get<string>('refresh_token');
         if (!token) return of(AuthActions.logout());
+        if (!refresh) return of(AuthActions.logout());
         return this.api.get<any>('users/me').pipe(
-          map((user) => AuthActions.setUser({ user, access_token: token!, refresh_token: refresh! })),
+          map((user) => AuthActions.setUser({ user, access_token: token, refresh_token: refresh })),
           catchError(() => of(AuthActions.logout())),
         );
       }),

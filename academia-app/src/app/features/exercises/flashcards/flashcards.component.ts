@@ -1,4 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface Flashcard {
@@ -16,7 +18,7 @@ interface Flashcard {
   templateUrl: './flashcards.component.html',
   standalone: false,
 })
-export class FlashcardsComponent implements OnInit {
+export class FlashcardsComponent implements OnInit, OnDestroy {
   cards: Flashcard[] = [];
   loading = false;
   currentIndex = 0;
@@ -28,14 +30,23 @@ export class FlashcardsComponent implements OnInit {
     advanced: 'bg-red-100 text-red-700',
   };
 
+  private destroy$ = new Subject<void>();
+
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.loading = true;
-    this.api.get<Flashcard[]>('exercises/flashcards').subscribe({
-      next: (data) => { this.cards = data; this.loading = false; this.cdr.detectChanges(); },
-      error: () => { this.loading = false; this.cdr.detectChanges(); },
-    });
+    this.api.get<Flashcard[]>('exercises/flashcards')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => { this.cards = data; this.loading = false; this.cdr.detectChanges(); },
+        error: (err) => { this.loading = false; this.cdr.detectChanges(); console.error('Error loading flashcards:', err); },
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   get current(): Flashcard | null {

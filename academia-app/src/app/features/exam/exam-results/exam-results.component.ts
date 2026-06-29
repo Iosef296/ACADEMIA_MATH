@@ -1,5 +1,7 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface QuestionResult {
@@ -27,7 +29,7 @@ interface ExamResult {
   templateUrl: './exam-results.component.html',
   standalone: false,
 })
-export class ExamResultsComponent implements OnInit {
+export class ExamResultsComponent implements OnInit, OnDestroy {
   examId!: number;
   attemptId!: number;
   result: ExamResult | null = null;
@@ -35,6 +37,8 @@ export class ExamResultsComponent implements OnInit {
   error = '';
 
   showAnswers = false;
+
+  private destroy$ = new Subject<void>();
 
   constructor(
     private route: ActivatedRoute,
@@ -49,19 +53,26 @@ export class ExamResultsComponent implements OnInit {
     this.load();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   load(): void {
     this.api
       .get<ExamResult>(`exams/${this.examId}/attempt/${this.attemptId}/result`)
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
           this.result = data;
           this.loading = false;
           this.cdr.detectChanges();
         },
-        error: () => {
+        error: (err) => {
           this.error = 'No se pudo cargar el resultado.';
           this.loading = false;
           this.cdr.detectChanges();
+          console.error('Error loading exam result:', err);
         },
       });
   }

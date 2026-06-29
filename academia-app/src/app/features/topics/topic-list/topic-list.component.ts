@@ -1,7 +1,6 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-import { Subject } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { timeout, catchError, takeUntil } from 'rxjs/operators';
-import { of } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 
 interface Topic {
@@ -24,11 +23,14 @@ export class TopicListComponent implements OnInit, OnDestroy {
   error = '';
   searchQuery = '';
 
+  private destroy$ = new Subject<void>();
+
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.loading = true;
     this.api.get<Topic[]>('topics').pipe(
+      takeUntil(this.destroy$),
       timeout(15000),
       catchError((err) => {
         this.error = err?.name === 'TimeoutError'
@@ -37,14 +39,20 @@ export class TopicListComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
         return of([] as Topic[]);
       }),
-    ).subscribe((data) => {
-      this.topics = Array.isArray(data) ? data : [];
-      this.loading = false;
-      this.cdr.detectChanges();
+    ).subscribe({
+      next: (data) => {
+        this.topics = Array.isArray(data) ? data : [];
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Error loading topics:', err),
     });
   }
 
-  ngOnDestroy(): void {}
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   get filtered(): Topic[] {
     if (!this.searchQuery.trim()) return this.topics;

@@ -40,7 +40,7 @@ public class MoodServiceImpl implements MoodService {
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         return moodRepository.findFirstByUserIdAndCreatedAtAfterOrderByCreatedAtDesc(userId, startOfDay)
                 .map(this::toResponse)
-                .orElse(null);
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "No se encontró estado de ánimo hoy"));
     }
 
     @Override

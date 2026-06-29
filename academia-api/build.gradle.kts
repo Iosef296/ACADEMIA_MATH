@@ -33,6 +33,7 @@ dependencies {
 
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("org.postgresql:postgresql")
+	implementation("org.flywaydb:flyway-database-postgresql")
 	annotationProcessor("org.projectlombok:lombok")
 	annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
 	annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")

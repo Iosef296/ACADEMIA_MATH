@@ -1,4 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface Exam {
@@ -16,25 +18,35 @@ interface Exam {
   templateUrl: './exam-list.component.html',
   standalone: false,
 })
-export class ExamListComponent implements OnInit {
+export class ExamListComponent implements OnInit, OnDestroy {
   exams: Exam[] = [];
   loading = false;
   searchQuery = '';
 
+  private destroy$ = new Subject<void>();
+
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    this.api.get<Exam[]>('exams').subscribe({
-      next: (data) => {
-        this.exams = data;
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-    });
+    this.api.get<Exam[]>('exams')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.exams = data;
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.loading = false;
+          this.cdr.detectChanges();
+          console.error('Error loading exams:', err);
+        },
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   get filtered(): Exam[] {

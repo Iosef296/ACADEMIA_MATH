@@ -1,4 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface User {
@@ -14,7 +16,7 @@ interface User {
   templateUrl: './user-management.component.html',
   standalone: false,
 })
-export class UserManagementComponent implements OnInit {
+export class UserManagementComponent implements OnInit, OnDestroy {
   users: User[] = [];
   loading = false;
   searchQuery = '';
@@ -44,17 +46,26 @@ export class UserManagementComponent implements OnInit {
     admin:   'bg-red-100 text-red-700',
   };
 
+  private destroy$ = new Subject<void>();
+
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.load();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   load(): void {
-    this.api.get<User[]>('users').subscribe({
-      next: (data) => { this.users = data; this.loading = false; this.cdr.detectChanges(); },
-      error: () => { this.loading = false; this.cdr.detectChanges(); },
-    });
+    this.api.get<User[]>('users')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => { this.users = data; this.loading = false; this.cdr.detectChanges(); },
+        error: () => { this.loading = false; this.cdr.detectChanges(); },
+      });
   }
 
   get filtered(): User[] {
@@ -80,20 +91,22 @@ export class UserManagementComponent implements OnInit {
   saveRole(user: User): void {
     if (this.editingRole === user.role) { this.cancelEdit(); return; }
     this.savingId = user.id;
-    this.api.put(`users/${user.id}/role`, { role: this.editingRole }).subscribe({
-      next: () => {
-        user.role = this.editingRole as User['role'];
-        this.savingId = null;
-        this.editingId = null;
-        this.success = `Rol de ${user.name} actualizado.`;
-        setTimeout(() => (this.success = ''), 3000);
-      },
-      error: () => {
-        this.savingId = null;
-        this.error = 'Error al cambiar el rol.';
-        setTimeout(() => (this.error = ''), 3000);
-      },
-    });
+    this.api.put(`users/${user.id}/role`, { role: this.editingRole })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          user.role = this.editingRole as User['role'];
+          this.savingId = null;
+          this.editingId = null;
+          this.success = `Rol de ${user.name} actualizado.`;
+          setTimeout(() => (this.success = ''), 3000);
+        },
+        error: () => {
+          this.savingId = null;
+          this.error = 'Error al cambiar el rol.';
+          setTimeout(() => (this.error = ''), 3000);
+        },
+      });
   }
 
   confirmDelete(id: number): void {
@@ -106,19 +119,21 @@ export class UserManagementComponent implements OnInit {
 
   deleteUser(user: User): void {
     this.deletingId = user.id;
-    this.api.delete(`users/${user.id}`).subscribe({
-      next: () => {
-        this.users = this.users.filter((u) => u.id !== user.id);
-        this.deletingId = null;
-        this.confirmDeleteId = null;
-        this.success = `Usuario ${user.name} eliminado.`;
-        setTimeout(() => (this.success = ''), 3000);
-      },
-      error: () => {
-        this.deletingId = null;
-        this.error = 'Error al eliminar usuario.';
-        setTimeout(() => (this.error = ''), 3000);
-      },
-    });
+    this.api.delete(`users/${user.id}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.users = this.users.filter((u) => u.id !== user.id);
+          this.deletingId = null;
+          this.confirmDeleteId = null;
+          this.success = `Usuario ${user.name} eliminado.`;
+          setTimeout(() => (this.success = ''), 3000);
+        },
+        error: () => {
+          this.deletingId = null;
+          this.error = 'Error al eliminar usuario.';
+          setTimeout(() => (this.error = ''), 3000);
+        },
+      });
   }
 }

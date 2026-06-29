@@ -1,9 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { ApiService } from '../../../core/services/api.service';
 import { PdfTemplate } from '../template-selector/template-selector.component';
-import { environment } from '../../../../environments/environment';
 
 interface Exercise {
   id: string;
@@ -51,7 +49,6 @@ export class PdfBuilderComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private api: ApiService,
-    private http: HttpClient,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -145,8 +142,8 @@ export class PdfBuilderComponent implements OnInit {
     }
     this.error = '';
     this.generating = true;
-    this.http
-      .post(`${environment.apiUrl}/pdf/generate`, this.buildPayload(), { responseType: 'blob' })
+    this.api
+      .postBlob('pdf/generate', this.buildPayload())
       .subscribe({
         next: (blob) => {
           this.generating = false;

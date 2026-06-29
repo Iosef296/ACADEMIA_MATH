@@ -57,9 +57,13 @@ public class TopicController {
 
     @PostMapping("/{id}/prerequisites")
     @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
-    public ResponseEntity<TopicResponse> addPrerequisite(
+    public ResponseEntity<?> addPrerequisite(
             @PathVariable UUID id, @RequestBody Map<String, String> body) {
-        UUID prereqId = UUID.fromString(body.get("prerequisiteId"));
+        String prereqIdStr = body.get("prerequisiteId");
+        if (prereqIdStr == null || prereqIdStr.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "prerequisiteId requerido"));
+        }
+        UUID prereqId = UUID.fromString(prereqIdStr);
         return ResponseEntity.ok(topicService.addPrerequisite(id, prereqId));
     }
 

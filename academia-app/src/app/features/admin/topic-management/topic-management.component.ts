@@ -1,4 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface Topic {
@@ -15,7 +17,7 @@ interface Topic {
   templateUrl: './topic-management.component.html',
   standalone: false,
 })
-export class TopicManagementComponent implements OnInit {
+export class TopicManagementComponent implements OnInit, OnDestroy {
   topics: Topic[] = [];
   tree: Topic[] = [];
   loading = false;
@@ -37,22 +39,31 @@ export class TopicManagementComponent implements OnInit {
   deletingId: number | null = null;
   confirmDeleteId: number | null = null;
 
+  private destroy$ = new Subject<void>();
+
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.load();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   load(): void {
-    this.api.get<Topic[]>('topics').subscribe({
-      next: (data) => {
-        this.topics = data;
-        this.tree = this.buildTree(data);
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: () => { this.loading = false; this.cdr.detectChanges(); },
-    });
+    this.api.get<Topic[]>('topics')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.topics = data;
+          this.tree = this.buildTree(data);
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+        error: () => { this.loading = false; this.cdr.detectChanges(); },
+      });
   }
 
   private buildTree(flat: Topic[]): Topic[] {
@@ -75,22 +86,23 @@ export class TopicManagementComponent implements OnInit {
     this.api.post<Topic>('topics', {
       name: this.newName.trim(),
       parent_id: this.newParentId,
-    }).subscribe({
-      next: () => {
-        this.creating = false;
-        this.showCreate = false;
-        this.newName = '';
-        this.newParentId = null;
-        this.success = 'Tema creado.';
-        setTimeout(() => (this.success = ''), 3000);
-        this.load();
-      },
-      error: () => {
-        this.creating = false;
-        this.error = 'Error al crear el tema.';
-        setTimeout(() => (this.error = ''), 3000);
-      },
-    });
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.creating = false;
+          this.showCreate = false;
+          this.newName = '';
+          this.newParentId = null;
+          this.success = 'Tema creado.';
+          setTimeout(() => (this.success = ''), 3000);
+          this.load();
+        },
+        error: () => {
+          this.creating = false;
+          this.error = 'Error al crear el tema.';
+          setTimeout(() => (this.error = ''), 3000);
+        },
+      });
   }
 
   startEdit(topic: Topic): void {
@@ -106,26 +118,31 @@ export class TopicManagementComponent implements OnInit {
       return;
     }
     this.savingId = topic.id;
-    this.api.put(`topics/${topic.id}`, { name: this.editingName.trim() }).subscribe({
-      next: () => {
-        topic.name = this.editingName.trim();
-        this.savingId = null;
-        this.editingId = null;
-        this.success = 'Tema actualizado.';
-        setTimeout(() => (this.success = ''), 3000);
-      },
-      error: () => {
-        this.savingId = null;
-        this.error = 'Error al actualizar.';
-        setTimeout(() => (this.error = ''), 3000);
-      },
-    });
+    this.api.put(`topics/${topic.id}`, { name: this.editingName.trim() })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          topic.name = this.editingName.trim();
+          this.savingId = null;
+          this.editingId = null;
+          this.success = 'Tema actualizado.';
+          setTimeout(() => (this.success = ''), 3000);
+        },
+        error: () => {
+          this.savingId = null;
+          this.error = 'Error al actualizar.';
+          setTimeout(() => (this.error = ''), 3000);
+        },
+      });
   }
 
   toggleLock(topic: Topic): void {
-    this.api.put(`topics/${topic.id}`, { is_locked: !topic.is_locked }).subscribe({
-      next: () => { topic.is_locked = !topic.is_locked; },
-    });
+    this.api.put(`topics/${topic.id}`, { is_locked: !topic.is_locked })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => { topic.is_locked = !topic.is_locked; },
+        error: (err) => console.error('Error:', err),
+      });
   }
 
   confirmDelete(id: number): void { this.confirmDeleteId = id; }
@@ -133,20 +150,22 @@ export class TopicManagementComponent implements OnInit {
 
   deleteTopic(topic: Topic): void {
     this.deletingId = topic.id;
-    this.api.delete(`topics/${topic.id}`).subscribe({
-      next: () => {
-        this.deletingId = null;
-        this.confirmDeleteId = null;
-        this.success = `"${topic.name}" eliminado.`;
-        setTimeout(() => (this.success = ''), 3000);
-        this.load();
-      },
-      error: () => {
-        this.deletingId = null;
-        this.error = 'Error al eliminar. Puede tener ejercicios asociados.';
-        setTimeout(() => (this.error = ''), 4000);
-      },
-    });
+    this.api.delete(`topics/${topic.id}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deletingId = null;
+          this.confirmDeleteId = null;
+          this.success = `"${topic.name}" eliminado.`;
+          setTimeout(() => (this.success = ''), 3000);
+          this.load();
+        },
+        error: () => {
+          this.deletingId = null;
+          this.error = 'Error al eliminar. Puede tener ejercicios asociados.';
+          setTimeout(() => (this.error = ''), 4000);
+        },
+      });
   }
 
   get rootTopics(): Topic[] {

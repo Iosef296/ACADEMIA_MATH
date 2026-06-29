@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { RouterModule, Routes, PreloadAllModules } from '@angular/router';
+import { RouterModule, Routes, NoPreloading } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { rolesGuard } from './core/guards/roles.guard';
 import { examGuard } from './core/guards/exam.guard';
@@ -80,7 +80,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  imports: [RouterModule.forRoot(routes, { scrollPositionRestoration: 'top', preloadingStrategy: PreloadAllModules })],
+  imports: [RouterModule.forRoot(routes, { scrollPositionRestoration: 'top', preloadingStrategy: NoPreloading })],
   exports: [RouterModule],
 })
 export class AppRoutingModule {}

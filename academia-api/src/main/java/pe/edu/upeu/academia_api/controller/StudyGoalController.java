@@ -45,7 +45,7 @@ public class StudyGoalController {
     public ResponseEntity<StudyGoal> update(@PathVariable UUID id, @RequestBody Map<String, Object> body, Authentication auth) {
         StudyGoal goal = repository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Meta no encontrada"));
-        if (!goal.getUser().getId().equals(UUID.fromString(auth.getName()))) {
+        if (goal.getUser() == null || !goal.getUser().getId().equals(UUID.fromString(auth.getName()))) {
             throw new AppException(HttpStatus.FORBIDDEN, "Sin permisos");
         }
         if (body.get("description") != null) goal.setDescription((String) body.get("description"));
@@ -61,7 +61,7 @@ public class StudyGoalController {
     public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication auth) {
         StudyGoal goal = repository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Meta no encontrada"));
-        if (!goal.getUser().getId().equals(UUID.fromString(auth.getName()))) {
+        if (goal.getUser() == null || !goal.getUser().getId().equals(UUID.fromString(auth.getName()))) {
             throw new AppException(HttpStatus.FORBIDDEN, "Sin permisos");
         }
         repository.deleteById(id);

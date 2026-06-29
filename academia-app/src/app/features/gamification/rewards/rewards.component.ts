@@ -1,4 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface Reward {
@@ -16,37 +18,47 @@ interface Reward {
   templateUrl: './rewards.component.html',
   standalone: false,
 })
-export class RewardsComponent implements OnInit {
+export class RewardsComponent implements OnInit, OnDestroy {
   rewards: Reward[] = [];
   loading = false;
   using: number | null = null;
   successMsg = '';
+  private destroy$ = new Subject<void>();
 
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    this.api.get<Reward[]>('rewards/mine').subscribe({
-      next: (data) => {
-        this.rewards = data;
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: () => { this.loading = false; this.cdr.detectChanges(); },
-    });
+    this.api.get<Reward[]>('rewards/mine')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.rewards = data;
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+        error: () => { this.loading = false; this.cdr.detectChanges(); },
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   use(reward: Reward): void {
     if (reward.used) return;
     this.using = reward.id;
-    this.api.post(`rewards/${reward.id}/use`, {}).subscribe({
-      next: () => {
-        reward.used = true;
-        this.using = null;
-        this.successMsg = `"${reward.title}" canjeada con éxito.`;
-        setTimeout(() => (this.successMsg = ''), 3000);
-      },
-      error: () => { this.using = null; },
-    });
+    this.api.post(`rewards/${reward.id}/use`, {})
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          reward.used = true;
+          this.using = null;
+          this.successMsg = `"${reward.title}" canjeada con éxito.`;
+          setTimeout(() => (this.successMsg = ''), 3000);
+        },
+        error: () => { this.using = null; },
+      });
   }
 
   get available(): Reward[] {

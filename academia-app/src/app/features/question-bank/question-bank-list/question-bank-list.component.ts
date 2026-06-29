@@ -1,4 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface QuestionBank {
@@ -22,7 +24,7 @@ interface QuestionBank {
   templateUrl: './question-bank-list.component.html',
   standalone: false,
 })
-export class QuestionBankListComponent implements OnInit {
+export class QuestionBankListComponent implements OnInit, OnDestroy {
   questions: QuestionBank[] = [];
   loading = false;
   error = '';
@@ -33,10 +35,17 @@ export class QuestionBankListComponent implements OnInit {
   editingId: string | null = null;
   form: Partial<QuestionBank> & { topicId?: string } = this.emptyForm();
 
+  private destroy$ = new Subject<void>();
+
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.load();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   load(): void {
@@ -44,10 +53,12 @@ export class QuestionBankListComponent implements OnInit {
     const params: any = {};
     if (this.filterDifficulty) params['difficulty'] = this.filterDifficulty;
     if (this.searchQ) params['q'] = this.searchQ;
-    this.api.get<QuestionBank[]>('question-bank', params).subscribe({
-      next: (data) => { this.questions = data; this.loading = false; this.cdr.detectChanges(); },
-      error: () => { this.error = 'Error cargando banco'; this.loading = false; this.cdr.detectChanges(); },
-    });
+    this.api.get<QuestionBank[]>('question-bank', params)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => { this.questions = data; this.loading = false; this.cdr.detectChanges(); },
+        error: () => { this.error = 'Error cargando banco'; this.loading = false; this.cdr.detectChanges(); },
+      });
   }
 
   openCreate(): void {
@@ -76,24 +87,30 @@ export class QuestionBankListComponent implements OnInit {
 
   save(): void {
     if (this.editingId) {
-      this.api.put<QuestionBank>(`question-bank/${this.editingId}`, this.form).subscribe({
-        next: () => { this.showForm = false; this.load(); },
-        error: () => { this.error = 'Error guardando'; },
-      });
+      this.api.put<QuestionBank>(`question-bank/${this.editingId}`, this.form)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => { this.showForm = false; this.load(); },
+          error: () => { this.error = 'Error guardando'; },
+        });
     } else {
-      this.api.post<QuestionBank>('question-bank', this.form).subscribe({
-        next: () => { this.showForm = false; this.load(); },
-        error: () => { this.error = 'Error creando'; },
-      });
+      this.api.post<QuestionBank>('question-bank', this.form)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => { this.showForm = false; this.load(); },
+          error: () => { this.error = 'Error creando'; },
+        });
     }
   }
 
   delete(id: string): void {
     if (!confirm('¿Eliminar pregunta?')) return;
-    this.api.delete(`question-bank/${id}`).subscribe({
-      next: () => this.load(),
-      error: () => { this.error = 'Error eliminando'; },
-    });
+    this.api.delete(`question-bank/${id}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => this.load(),
+        error: () => { this.error = 'Error eliminando'; },
+      });
   }
 
   cancel(): void {

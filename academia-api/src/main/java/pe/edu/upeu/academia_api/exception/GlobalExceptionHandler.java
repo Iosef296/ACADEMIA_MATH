@@ -15,6 +15,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -47,6 +48,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 ApiError.builder()
                         .status(403)
                         .message("Acceso denegado")
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                ApiError.builder()
+                        .status(400)
+                        .message("Parámetro inválido: " + ex.getMessage())
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<ApiError> handleNotFound(NoSuchElementException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.builder()
+                        .status(404)
+                        .message("Recurso no encontrado")
                         .timestamp(LocalDateTime.now())
                         .build()
         );

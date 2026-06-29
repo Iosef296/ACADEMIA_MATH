@@ -8,11 +8,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pe.edu.upeu.academia_api.service.impl.PdfServiceImpl;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/pdf")
@@ -20,7 +21,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PdfController {
 
     private final PdfServiceImpl pdfService;
-    private final ConcurrentHashMap<String, byte[]> previewCache = new ConcurrentHashMap<>();
+    private final Map<String, byte[]> previewCache = Collections.synchronizedMap(
+        new LinkedHashMap<String, byte[]>(64, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, byte[]> eldest) {
+                return size() > 50;
+            }
+        }
+    );
 
     @GetMapping("/templates")
     public ResponseEntity<List<Map<String, Object>>> getTemplates() {

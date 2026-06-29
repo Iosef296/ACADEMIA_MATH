@@ -1,8 +1,6 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
-import { environment } from '../../../../environments/environment';
-import { HttpClient } from '@angular/common/http';
 
 interface AttemptHistory {
   attemptId: string;
@@ -27,7 +25,6 @@ export class ExamHistoryComponent implements OnInit {
   constructor(
     private api: ApiService,
     private router: Router,
-    private http: HttpClient,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -41,7 +38,7 @@ export class ExamHistoryComponent implements OnInit {
 
   downloadCertificate(attemptId: string): void {
     this.downloadingId = attemptId;
-    this.http.get(`${environment.apiUrl}/exams/attempts/${attemptId}/certificate`, { responseType: 'blob' })
+    this.api.getBlob(`exams/attempts/${attemptId}/certificate`)
       .subscribe({
         next: (blob) => {
           const url = URL.createObjectURL(blob);

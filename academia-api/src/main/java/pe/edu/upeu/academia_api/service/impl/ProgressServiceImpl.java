@@ -61,7 +61,7 @@ public class ProgressServiceImpl implements ProgressService {
     public ProgressResponse getByTopic(UUID userId, UUID topicId) {
         return progressRepository.findByUserIdAndTopicId(userId, topicId)
                 .map(this::toResponse)
-                .orElse(null);
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Progreso no encontrado para el tema indicado"));
     }
 
     @Override

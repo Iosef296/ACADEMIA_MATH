@@ -36,8 +36,8 @@ public class ReportController {
         List<Map<String, Object>> progressByTopic = studentProgressRepository.findByUserId(userId)
                 .stream().map(p -> {
                     Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("topicId", p.getTopic().getId());
-                    m.put("topicName", p.getTopic().getName());
+                    m.put("topicId", p.getTopic() != null ? p.getTopic().getId() : null);
+                    m.put("topicName", p.getTopic() != null ? p.getTopic().getName() : null);
                     m.put("xp", p.getXp());
                     m.put("level", p.getLevel());
                     m.put("exercisesSolved", p.getExercisesSolved());
@@ -53,8 +53,8 @@ public class ReportController {
         List<Map<String, Object>> examHistory = examAttemptRepository.findByUserIdOrderByStartedAtDesc(userId)
                 .stream().limit(10).map(a -> {
                     Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("examId", a.getExam().getId());
-                    m.put("examTitle", a.getExam().getTitle());
+                    m.put("examId", a.getExam() != null ? a.getExam().getId() : null);
+                    m.put("examTitle", a.getExam() != null ? a.getExam().getTitle() : null);
                     m.put("score", a.getScore());
                     m.put("startedAt", a.getStartedAt());
                     m.put("submittedAt", a.getSubmittedAt());
@@ -79,8 +79,8 @@ public class ReportController {
                 .limit(5)
                 .map(p -> {
                     Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("topicId", p.getTopic().getId());
-                    m.put("topicName", p.getTopic().getName());
+                    m.put("topicId", p.getTopic() != null ? p.getTopic().getId() : null);
+                    m.put("topicName", p.getTopic() != null ? p.getTopic().getName() : null);
                     m.put("errorCount", p.getErrorCount());
                     m.put("exercisesSolved", p.getExercisesSolved());
                     m.put("errorRate", Math.round((double) p.getErrorCount() / p.getExercisesSolved() * 1000.0) / 10.0);
@@ -108,7 +108,7 @@ public class ReportController {
                 .limit(10)
                 .map(p -> {
                     Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("topicName", p.getTopic().getName());
+                    m.put("topicName", p.getTopic() != null ? p.getTopic().getName() : null);
                     m.put("totalErrors", p.getErrorCount());
                     return m;
                 }).toList();
@@ -132,7 +132,7 @@ public class ReportController {
         report.put("progressByTopic", studentProgressRepository.findByUserId(id)
                 .stream().map(p -> {
                     Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("topicName", p.getTopic().getName());
+                    m.put("topicName", p.getTopic() != null ? p.getTopic().getName() : null);
                     m.put("xp", p.getXp());
                     m.put("level", p.getLevel());
                     m.put("exercisesSolved", p.getExercisesSolved());

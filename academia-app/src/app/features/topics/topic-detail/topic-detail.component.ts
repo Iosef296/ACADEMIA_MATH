@@ -1,5 +1,7 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Subject, firstValueFrom } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface Exercise {
@@ -30,7 +32,7 @@ interface Progress {
   templateUrl: './topic-detail.component.html',
   standalone: false,
 })
-export class TopicDetailComponent implements OnInit {
+export class TopicDetailComponent implements OnInit, OnDestroy {
   topicId = '';
   topic: Topic | null = null;
   exercises: Exercise[] = [];
@@ -49,14 +51,16 @@ export class TopicDetailComponent implements OnInit {
     advanced: 'bg-red-100 text-red-700',
   };
 
+  private destroy$ = new Subject<void>();
+
   constructor(private route: ActivatedRoute, private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.topicId = this.route.snapshot.paramMap.get('id') ?? '';
     Promise.all([
-      this.api.get<Topic>(`topics/${this.topicId}`).toPromise(),
-      this.api.get<Exercise[]>(`exercises?topicId=${this.topicId}`).toPromise(),
-      this.api.get<Progress>(`progress/topics/${this.topicId}`).toPromise(),
+      firstValueFrom(this.api.get<Topic>(`topics/${this.topicId}`)),
+      firstValueFrom(this.api.get<Exercise[]>(`exercises?topicId=${this.topicId}`)),
+      firstValueFrom(this.api.get<Progress>(`progress/topics/${this.topicId}`)),
     ]).then(([topic, exercises, progress]) => {
       this.topic = topic ?? null;
       this.exercises = exercises ?? [];
@@ -67,6 +71,11 @@ export class TopicDetailComponent implements OnInit {
       this.loading = false;
       this.cdr.detectChanges();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   get xpToNextLevel(): number {

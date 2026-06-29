@@ -1,5 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 export interface PdfTemplate {
@@ -18,23 +20,32 @@ export interface PdfTemplate {
   templateUrl: './template-selector.component.html',
   standalone: false,
 })
-export class TemplateSelectorComponent implements OnInit {
+export class TemplateSelectorComponent implements OnInit, OnDestroy {
   templates: PdfTemplate[] = [];
   loading = false;
   selected: PdfTemplate | null = null;
 
+  private destroy$ = new Subject<void>();
+
   constructor(private api: ApiService, private router: Router) {}
 
   ngOnInit(): void {
-    this.api.get<PdfTemplate[]>('pdf/templates').subscribe({
-      next: (data) => {
-        this.templates = data;
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-      },
-    });
+    this.api.get<PdfTemplate[]>('pdf/templates')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.templates = data;
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
+        },
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   select(t: PdfTemplate): void {

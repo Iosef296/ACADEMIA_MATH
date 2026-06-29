@@ -1,6 +1,7 @@
 package pe.edu.upeu.academia_api.websocket;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -26,6 +27,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtUtil jwtUtil;
 
+    @Value("${app.cors.allowed-origins:http://localhost:4200}")
+    private String allowedOrigins;
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic", "/queue");
@@ -36,7 +40,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("http://localhost:4200")
+                .setAllowedOriginPatterns(allowedOrigins.split("\\s*,\\s*"))
                 .withSockJS();
     }
 
@@ -48,18 +52,20 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
                 if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
                     String token = accessor.getFirstNativeHeader("Authorization");
-                    if (token != null && token.startsWith("Bearer ")) {
-                        token = token.substring(7);
-                        if (jwtUtil.isTokenValid(token) && jwtUtil.isAccessToken(token)) {
-                            String userId = jwtUtil.extractUserId(token);
-                            String role = jwtUtil.extractRole(token);
-                            var auth = new UsernamePasswordAuthenticationToken(
-                                    userId, null,
-                                    List.of(new SimpleGrantedAuthority("ROLE_" + (role != null ? role.toUpperCase() : "STUDENT")))
-                            );
-                            accessor.setUser(auth);
-                        }
+                    if (token == null || !token.startsWith("Bearer ")) {
+                        throw new org.springframework.messaging.MessageDeliveryException("Missing Authorization header");
                     }
+                    token = token.substring(7);
+                    if (!jwtUtil.isTokenValid(token) || !jwtUtil.isAccessToken(token)) {
+                        throw new org.springframework.messaging.MessageDeliveryException("Invalid or expired token");
+                    }
+                    String userId = jwtUtil.extractUserId(token);
+                    String role = jwtUtil.extractRole(token);
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            userId, null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + (role != null ? role.toUpperCase() : "STUDENT")))
+                    );
+                    accessor.setUser(auth);
                 }
                 return message;
             }

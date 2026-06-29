@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Observable, Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs/operators';
 import { User } from '../../store/auth/auth.state';
 import { selectCurrentUser } from '../../store/auth/auth.selectors';
 import { logout } from '../../store/auth/auth.actions';
@@ -13,7 +13,7 @@ import { ApiService } from '../../core/services/api.service';
   templateUrl: './navbar.component.html',
   standalone: false,
 })
-export class NavbarComponent implements OnInit {
+export class NavbarComponent implements OnInit, OnDestroy {
   user$!: Observable<User | null>;
   showUserMenu = false;
 
@@ -22,6 +22,7 @@ export class NavbarComponent implements OnInit {
   searching = false;
 
   private searchSubject = new Subject<string>();
+  private destroy$ = new Subject<void>();
 
   constructor(private store: Store, private api: ApiService, private router: Router) {}
 
@@ -35,11 +36,17 @@ export class NavbarComponent implements OnInit {
         if (q.length < 2) { this.searchResults = null; return []; }
         this.searching = true;
         return this.api.get<any>('search', { q });
-      })
+      }),
+      takeUntil(this.destroy$)
     ).subscribe({
       next: (res) => { this.searchResults = res; this.searching = false; },
       error: () => { this.searching = false; },
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   onSearchInput(): void {

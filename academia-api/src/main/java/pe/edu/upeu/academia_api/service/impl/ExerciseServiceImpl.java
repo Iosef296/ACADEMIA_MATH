@@ -12,7 +12,11 @@ import pe.edu.upeu.academia_api.repository.*;
 import pe.edu.upeu.academia_api.service.ExerciseService;
 import pe.edu.upeu.academia_api.service.ProgressService;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -76,8 +80,10 @@ public class ExerciseServiceImpl implements ExerciseService {
             double maxVal = v.getMaxVal() != null ? v.getMaxVal() : 10;
 
             if (level != null && level > 1) {
-                double scaleFactor = Math.min(level * 0.2, 2.0);
-                maxVal = maxVal + (maxVal - minVal) * scaleFactor * 0.5;
+                double scaleFactor = Math.min((level - 1) * 0.2, 1.0);
+                double range = maxVal - minVal;
+                minVal = minVal + range * scaleFactor * 0.3;
+                maxVal = maxVal + range * scaleFactor;
             }
 
             double val = generateConstrained(minVal, maxVal,
@@ -117,6 +123,16 @@ public class ExerciseServiceImpl implements ExerciseService {
             if (constraintType == null || constraintType.isEmpty() || satisfiesConstraint(val, constraintType, constraintValue)) {
                 return val;
             }
+        }
+        return findNearestValid(min, max, constraintType, constraintValue);
+    }
+
+    private double findNearestValid(double min, double max, String constraintType, String constraintValue) {
+        if (constraintType == null || constraintType.isEmpty()) return Math.round(min);
+        long start = (long) Math.ceil(min);
+        long end = (long) Math.floor(max);
+        for (long n = start; n <= end; n++) {
+            if (satisfiesConstraint(n, constraintType, constraintValue)) return n;
         }
         return Math.round(min);
     }
@@ -158,7 +174,8 @@ public class ExerciseServiceImpl implements ExerciseService {
             catch (Exception ignored) {}
         }
 
-        User user = userRepository.findById(userId).orElseThrow();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
         ExerciseAttempt attempt = ExerciseAttempt.builder()
                 .exercise(exercise)
                 .user(user)
@@ -181,8 +198,8 @@ public class ExerciseServiceImpl implements ExerciseService {
                 .map(a -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("id", a.getId());
-                    m.put("exerciseId", a.getExercise().getId());
-                    m.put("exerciseTitle", a.getExercise().getTitle());
+                    m.put("exerciseId", a.getExercise() != null ? a.getExercise().getId() : null);
+                    m.put("exerciseTitle", a.getExercise() != null ? a.getExercise().getTitle() : null);
                     m.put("rating", a.getRating());
                     m.put("isCorrect", a.getIsCorrect());
                     m.put("timeSpent", a.getTimeSpent());
@@ -203,14 +220,17 @@ public class ExerciseServiceImpl implements ExerciseService {
         Set<UUID> seen = new HashSet<>();
         List<Map<String, Object>> flashcards = new ArrayList<>();
         for (ExerciseAttempt a : hardAttempts) {
+            if (a.getExercise() == null) continue;
             if (seen.add(a.getExercise().getId())) {
                 Map<String, Object> card = new LinkedHashMap<>();
                 card.put("exerciseId", a.getExercise().getId());
                 card.put("title", a.getExercise().getTitle());
                 card.put("contentLatex", a.getExercise().getContentLatex());
                 card.put("difficulty", a.getExercise().getDifficulty().name().toLowerCase());
-                card.put("topic", Map.of("id", a.getExercise().getTopic().getId(),
-                        "name", a.getExercise().getTopic().getName()));
+                card.put("topic", (a.getExercise().getTopic() != null)
+                        ? Map.of("id", a.getExercise().getTopic().getId(),
+                                "name", a.getExercise().getTopic().getName())
+                        : Map.of());
                 card.put("lastRating", a.getRating());
                 card.put("lastAttempt", a.getAttemptedAt());
                 flashcards.add(card);
@@ -218,13 +238,16 @@ public class ExerciseServiceImpl implements ExerciseService {
         }
 
         if (flashcards.isEmpty()) {
-            exerciseRepository.findAll().stream().limit(10).forEach(e -> {
+            exerciseRepository.findAll(PageRequest.of(0, 10, Sort.by("createdAt").descending()))
+                    .getContent().forEach(e -> {
                 Map<String, Object> card = new LinkedHashMap<>();
                 card.put("exerciseId", e.getId());
                 card.put("title", e.getTitle());
                 card.put("contentLatex", e.getContentLatex());
                 card.put("difficulty", e.getDifficulty().name().toLowerCase());
-                card.put("topic", Map.of("id", e.getTopic().getId(), "name", e.getTopic().getName()));
+                card.put("topic", e.getTopic() != null
+                        ? Map.of("id", e.getTopic().getId(), "name", e.getTopic().getName())
+                        : Map.of());
                 card.put("lastRating", null);
                 card.put("lastAttempt", null);
                 flashcards.add(card);
@@ -305,13 +328,17 @@ public class ExerciseServiceImpl implements ExerciseService {
     @Override
     @Transactional
     public void reorderSteps(UUID id, List<UUID> stepIds) {
+        Map<UUID, ExerciseStep> stepMap = stepRepository.findAllById(stepIds)
+                .stream().collect(Collectors.toMap(ExerciseStep::getId, s -> s));
+        List<ExerciseStep> toUpdate = new ArrayList<>();
         for (int i = 0; i < stepIds.size(); i++) {
-            int order = i;
-            stepRepository.findById(stepIds.get(i)).ifPresent(s -> {
-                s.setStepOrder(order);
-                stepRepository.save(s);
-            });
+            ExerciseStep step = stepMap.get(stepIds.get(i));
+            if (step != null) {
+                step.setStepOrder(i);
+                toUpdate.add(step);
+            }
         }
+        stepRepository.saveAll(toUpdate);
     }
 
     @Override

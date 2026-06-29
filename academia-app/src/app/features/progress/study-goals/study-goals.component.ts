@@ -1,4 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface StudyGoal {
@@ -16,12 +18,13 @@ interface StudyGoal {
   templateUrl: './study-goals.component.html',
   standalone: false,
 })
-export class StudyGoalsComponent implements OnInit {
+export class StudyGoalsComponent implements OnInit, OnDestroy {
   goals: StudyGoal[] = [];
   loading = false;
   showForm = false;
   saving = false;
   error = '';
+  private destroy$ = new Subject<void>();
 
   form = {
     description: '',
@@ -36,12 +39,19 @@ export class StudyGoalsComponent implements OnInit {
     this.load();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   load(): void {
     this.loading = true;
-    this.api.get<StudyGoal[]>('study-goals').subscribe({
-      next: (data) => { this.goals = data; this.loading = false; this.cdr.detectChanges(); },
-      error: () => { this.loading = false; this.cdr.detectChanges(); },
-    });
+    this.api.get<StudyGoal[]>('study-goals')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => { this.goals = data; this.loading = false; this.cdr.detectChanges(); },
+        error: () => { this.loading = false; this.cdr.detectChanges(); },
+      });
   }
 
   save(): void {
@@ -55,23 +65,35 @@ export class StudyGoalsComponent implements OnInit {
     if (this.form.targetDate) body.targetDate = this.form.targetDate;
     if (this.form.targetScore !== null) body.targetScore = this.form.targetScore;
 
-    this.api.post<StudyGoal>('study-goals', body).subscribe({
-      next: () => {
-        this.saving = false;
-        this.showForm = false;
-        this.form = { description: '', hoursPerWeek: 5, targetDate: '', targetScore: null };
-        this.load();
-      },
-      error: () => { this.saving = false; this.error = 'Error guardando meta.'; },
-    });
+    this.api.post<StudyGoal>('study-goals', body)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.saving = false;
+          this.showForm = false;
+          this.form = { description: '', hoursPerWeek: 5, targetDate: '', targetScore: null };
+          this.load();
+        },
+        error: () => { this.saving = false; this.error = 'Error guardando meta.'; },
+      });
   }
 
   deactivate(id: string): void {
-    this.api.put(`study-goals/${id}`, { isActive: false }).subscribe(() => this.load());
+    this.api.put(`study-goals/${id}`, { isActive: false })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => this.load(),
+        error: (err) => console.error('Error updating goal:', err),
+      });
   }
 
   delete(id: string): void {
     if (!confirm('¿Eliminar esta meta?')) return;
-    this.api.delete(`study-goals/${id}`).subscribe(() => this.load());
+    this.api.delete(`study-goals/${id}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => this.load(),
+        error: (err) => console.error('Error deleting goal:', err),
+      });
   }
 }

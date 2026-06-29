@@ -47,12 +47,12 @@ public class ExamController {
                 .stream().map(a -> {
                     Map<String, Object> m = new java.util.LinkedHashMap<>();
                     m.put("attemptId", a.getId());
-                    m.put("examId", a.getExam().getId());
-                    m.put("examTitle", a.getExam().getTitle());
+                    m.put("examId", a.getExam() != null ? a.getExam().getId() : null);
+                    m.put("examTitle", a.getExam() != null ? a.getExam().getTitle() : null);
                     m.put("score", a.getScore());
                     m.put("startedAt", a.getStartedAt());
                     m.put("submittedAt", a.getSubmittedAt());
-                    m.put("passed", a.getScore() != null && a.getScore() >= a.getExam().getPassingScore());
+                    m.put("passed", a.getScore() != null && a.getExam() != null && a.getScore() >= a.getExam().getPassingScore());
                     return m;
                 }).toList();
         return ResponseEntity.ok(history);
@@ -107,12 +107,12 @@ public class ExamController {
         ExamAttempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Intento no encontrado"));
 
-        if (attempt.getScore() == null || attempt.getScore() < attempt.getExam().getPassingScore()) {
+        if (attempt.getScore() == null || attempt.getExam() == null || attempt.getScore() < attempt.getExam().getPassingScore()) {
             throw new AppException(HttpStatus.FORBIDDEN, "Puntaje insuficiente para certificado");
         }
 
-        String studentName = attempt.getUser().getName();
-        String examTitle = attempt.getExam().getTitle();
+        String studentName = attempt.getUser() != null ? attempt.getUser().getName() : "Estudiante";
+        String examTitle = attempt.getExam() != null ? attempt.getExam().getTitle() : "Examen";
         double score = attempt.getScore();
         String date = attempt.getSubmittedAt() != null
                 ? attempt.getSubmittedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))

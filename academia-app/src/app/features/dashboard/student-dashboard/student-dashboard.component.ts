@@ -1,7 +1,7 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { Observable, forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, Subject, forkJoin, of } from 'rxjs';
+import { catchError, takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 import { selectCurrentUser } from '../../../store/auth/auth.selectors';
 import { User } from '../../../store/auth/auth.state';
@@ -34,7 +34,7 @@ interface DashboardData {
   templateUrl: './student-dashboard.component.html',
   standalone: false,
 })
-export class StudentDashboardComponent implements OnInit {
+export class StudentDashboardComponent implements OnInit, OnDestroy {
   user$!: Observable<User | null>;
   streak = 0;
   totalXp = 0;
@@ -54,6 +54,8 @@ export class StudentDashboardComponent implements OnInit {
   moodSaved = false;
   Math = Math;
 
+  private destroy$ = new Subject<void>();
+
   constructor(private store: Store, private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
@@ -61,29 +63,41 @@ export class StudentDashboardComponent implements OnInit {
     this.loadDashboard();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadDashboard(): void {
     forkJoin({
       streakRes: this.api.get<{ current: number }>('progress/streak').pipe(catchError(() => of(null))),
       progress: this.api.get<ProgressSummary[]>('progress').pipe(catchError(() => of([]))),
       challenges: this.api.get<Challenge[]>('gamification/challenges').pipe(catchError(() => of([]))),
-    }).subscribe({
-      next: ({ streakRes, progress, challenges }) => {
-        this.streak = (streakRes as any)?.current ?? 0;
-        this.progressList = (progress as ProgressSummary[]) ?? [];
-        this.totalXp = this.progressList.reduce((sum, p) => sum + p.xp, 0);
-        this.activeChallenge = (challenges as Challenge[])?.[0] ?? null;
-        this.cdr.detectChanges();
-      },
-      error: () => {},
-    });
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ({ streakRes, progress, challenges }) => {
+          this.streak = (streakRes as any)?.current ?? 0;
+          this.progressList = (progress as ProgressSummary[]) ?? [];
+          this.totalXp = this.progressList.reduce((sum, p) => sum + p.xp, 0);
+          this.activeChallenge = (challenges as Challenge[])?.[0] ?? null;
+          this.cdr.detectChanges();
+        },
+        error: (err) => console.error('Error loading dashboard:', err),
+      });
   }
 
   saveMood(mood: string): void {
     if (this.moodSaved) return;
     this.selectedMood = mood;
-    this.api.post('mood', { mood }).subscribe(() => {
-      this.moodSaved = true;
-    });
+    this.api.post('mood', { mood })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.moodSaved = true;
+        },
+        error: (err) => console.error('Error saving mood:', err),
+      });
   }
 
   get topTopics(): ProgressSummary[] {

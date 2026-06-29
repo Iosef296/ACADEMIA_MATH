@@ -1,5 +1,7 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface ForumPost {
@@ -19,7 +21,7 @@ interface ForumPost {
   templateUrl: './forum-list.component.html',
   standalone: false,
 })
-export class ForumListComponent implements OnInit {
+export class ForumListComponent implements OnInit, OnDestroy {
   posts: ForumPost[] = [];
   loading = false;
   searchQuery = '';
@@ -31,6 +33,8 @@ export class ForumListComponent implements OnInit {
   saving = false;
   error = '';
 
+  private destroy$ = new Subject<void>();
+
   constructor(
     private api: ApiService,
     private route: ActivatedRoute,
@@ -39,25 +43,38 @@ export class ForumListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe((params) => {
-      this.topicFilter = params['topicId'] ? Number(params['topicId']) : null;
-      this.load();
-    });
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (params) => {
+          this.topicFilter = params['topicId'] ? Number(params['topicId']) : null;
+          this.load();
+        },
+        error: (err) => console.error('Error reading query params:', err),
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   load(): void {
     const query = this.topicFilter ? `?topicId=${this.topicFilter}` : '';
-    this.api.get<ForumPost[]>(`forum/posts${query}`).subscribe({
-      next: (data) => {
-        this.posts = data;
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-    });
+    this.api.get<ForumPost[]>(`forum/posts${query}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.posts = data;
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.loading = false;
+          this.cdr.detectChanges();
+          console.error('Error loading forum posts:', err);
+        },
+      });
   }
 
   get filtered(): ForumPost[] {
@@ -84,6 +101,7 @@ export class ForumListComponent implements OnInit {
         body: this.newBody,
         topicId: this.topicFilter,
       })
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
           this.saving = false;

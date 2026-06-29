@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { firstValueFrom, Subject } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 
 interface Badge {
@@ -15,16 +16,17 @@ interface Badge {
   templateUrl: './badges.component.html',
   standalone: false,
 })
-export class BadgesComponent implements OnInit {
+export class BadgesComponent implements OnInit, OnDestroy {
   badges: Badge[] = [];
   loading = false;
+  private destroy$ = new Subject<void>();
 
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     Promise.all([
-      this.api.get<Badge[]>('badges').toPromise(),
-      this.api.get<Badge[]>('badges/mine').toPromise(),
+      firstValueFrom(this.api.get<Badge[]>('badges')),
+      firstValueFrom(this.api.get<Badge[]>('badges/mine')),
     ]).then(([all, mine]) => {
       const earnedIds = new Set((mine ?? []).map((b) => b.id));
       this.badges = (all ?? []).map((b) => ({
@@ -38,6 +40,11 @@ export class BadgesComponent implements OnInit {
       this.loading = false;
       this.cdr.detectChanges();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   get earned(): Badge[] {

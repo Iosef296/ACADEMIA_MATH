@@ -1,5 +1,7 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface Reply {
@@ -34,7 +36,7 @@ interface Post {
   templateUrl: './forum-post.component.html',
   standalone: false,
 })
-export class ForumPostComponent implements OnInit {
+export class ForumPostComponent implements OnInit, OnDestroy {
   postId!: number;
   post: Post | null = null;
   loading = false;
@@ -48,6 +50,8 @@ export class ForumPostComponent implements OnInit {
   selectedFile: File | null = null;
   uploading = false;
 
+  private destroy$ = new Subject<void>();
+
   constructor(private route: ActivatedRoute, private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
@@ -55,19 +59,26 @@ export class ForumPostComponent implements OnInit {
     this.load();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   load(): void {
-    this.api.get<Post>(`forum/posts/${this.postId}`).subscribe({
-      next: (data) => {
-        this.post = data;
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.error = 'No se pudo cargar la publicación.';
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-    });
+    this.api.get<Post>(`forum/posts/${this.postId}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.post = data;
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.error = 'No se pudo cargar la publicación.';
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   sendReply(): void {
@@ -77,6 +88,7 @@ export class ForumPostComponent implements OnInit {
 
     this.api
       .post<Reply>(`forum/posts/${this.postId}/reply`, { body: this.replyBody })
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (reply) => {
           this.post?.replies.push(reply);
@@ -101,6 +113,7 @@ export class ForumPostComponent implements OnInit {
 
     this.api
       .upload<Attachment>(`forum/posts/${this.postId}/attachments`, this.selectedFile, 'file')
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (att) => {
           this.post?.attachments.push(att);
