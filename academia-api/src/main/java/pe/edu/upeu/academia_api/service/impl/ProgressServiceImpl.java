@@ -47,13 +47,13 @@ public class ProgressServiceImpl implements ProgressService {
     @Override
     @Transactional(readOnly = true)
     public StreakResponse getStreak(UUID userId) {
-        StudentProfile profile = profileRepository.findByUserId(userId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Perfil no encontrado"));
-        return StreakResponse.builder()
-                .current(profile.getStreakCurrent())
-                .max(profile.getStreakMax())
-                .lastActive(profile.getStreakLastActive())
-                .build();
+        return profileRepository.findByUserId(userId)
+                .map(profile -> StreakResponse.builder()
+                        .current(profile.getStreakCurrent())
+                        .max(profile.getStreakMax())
+                        .lastActive(profile.getStreakLastActive())
+                        .build())
+                .orElse(StreakResponse.builder().current(0).max(0).lastActive(null).build());
     }
 
     @Override
@@ -61,7 +61,10 @@ public class ProgressServiceImpl implements ProgressService {
     public ProgressResponse getByTopic(UUID userId, UUID topicId) {
         return progressRepository.findByUserIdAndTopicId(userId, topicId)
                 .map(this::toResponse)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Progreso no encontrado para el tema indicado"));
+                .orElse(ProgressResponse.builder()
+                        .topicId(topicId)
+                        .xp(0).level(1).exercisesSolved(0).errorCount(0).timeSpent(0)
+                        .build());
     }
 
     @Override

@@ -28,7 +28,8 @@ public class MoodController {
 
     @GetMapping("/today")
     public ResponseEntity<MoodResponse> getToday(Authentication auth) {
-        return ResponseEntity.ok(moodService.getToday(UUID.fromString(auth.getName())));
+        MoodResponse today = moodService.getToday(UUID.fromString(auth.getName()));
+        return today != null ? ResponseEntity.ok(today) : ResponseEntity.noContent().build();
     }
 
     @GetMapping("/history")
