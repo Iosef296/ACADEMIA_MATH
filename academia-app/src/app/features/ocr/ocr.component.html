@@ -70,7 +70,7 @@
       <!-- Progress -->
       <div *ngIf="state === 'processing'" class="space-y-1.5">
         <div class="flex justify-between text-xs text-gray-500">
-          <span>{{ progress < 90 ? 'Reconociendo texto...' : 'Convirtiendo a LaTeX...' }}</span>
+          <span>{{ statusText }}</span>
           <span>{{ progress }}%</span>
         </div>
         <div class="w-full bg-gray-100 rounded-full h-2">

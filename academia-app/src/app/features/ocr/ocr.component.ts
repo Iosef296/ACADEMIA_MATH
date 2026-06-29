@@ -1,10 +1,9 @@
-import { Component, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../core/services/api.service';
 import { MathOcrService } from '../../core/services/math-ocr.service';
 
-type OcrMode = 'upload' | 'camera';
 type OcrState = 'idle' | 'processing' | 'done' | 'error';
 
 @Component({
@@ -13,7 +12,6 @@ type OcrState = 'idle' | 'processing' | 'done' | 'error';
   standalone: false,
 })
 export class OcrComponent implements OnDestroy {
-  mode: OcrMode = 'upload';
   state: OcrState = 'idle';
 
   selectedFile: File | null = null;
@@ -22,13 +20,19 @@ export class OcrComponent implements OnDestroy {
   extractedText = '';
   extractedLatex = '';
   progress = 0;
+  statusText = 'Iniciando...';
   errorMsg = '';
 
   copied = false;
 
   private destroy$ = new Subject<void>();
 
-  constructor(private api: ApiService, private mathOcr: MathOcrService) {}
+  constructor(
+    private api: ApiService,
+    private mathOcr: MathOcrService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
+  ) {}
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -61,10 +65,12 @@ export class OcrComponent implements OnDestroy {
     this.extractedLatex = '';
     this.errorMsg = '';
     this.progress = 0;
+    this.statusText = 'Iniciando...';
 
     const reader = new FileReader();
     reader.onload = (e) => {
       this.previewUrl = e.target?.result as string;
+      this.cdr.detectChanges();
     };
     reader.readAsDataURL(file);
   }
@@ -72,59 +78,102 @@ export class OcrComponent implements OnDestroy {
   async extract(): Promise<void> {
     if (!this.selectedFile) return;
     this.state = 'processing';
-    this.progress = 0;
+    this.progress = 2;
+    this.statusText = 'Cargando motor OCR...';
     this.errorMsg = '';
+    this.cdr.detectChanges();
 
     try {
-      // Step 1: client-side OCR with Tesseract.js
       const { createWorker } = await import('tesseract.js');
-      const worker = await createWorker('spa', 1, {
+
+      // 'eng' is smaller (1.8 MB vs 5 MB for 'spa') and more reliable on CDN.
+      // Latin characters in Spanish are handled correctly by the English model.
+      const worker = await createWorker('eng', 1, {
         logger: (m: any) => {
-          if (m.status === 'recognizing text') {
-            this.progress = Math.round(m.progress * 70);
-          }
+          // Logger runs outside Angular zone — NgZone.run() is required.
+          this.ngZone.run(() => {
+            switch (m.status) {
+              case 'loading tesseract core':
+                this.progress = 8;
+                this.statusText = 'Cargando motor OCR...';
+                break;
+              case 'loading language traineddata':
+                this.progress = 20;
+                this.statusText = 'Cargando datos de idioma...';
+                break;
+              case 'initializing tesseract':
+              case 'initializing api':
+                this.progress = 30;
+                this.statusText = 'Inicializando...';
+                break;
+              case 'recognizing text':
+                this.progress = 30 + Math.round((m.progress ?? 0) * 55);
+                this.statusText = 'Reconociendo texto...';
+                break;
+            }
+            this.cdr.detectChanges();
+          });
         },
       });
 
-      const { data } = await worker.recognize(this.selectedFile);
+      // Timeout guard: if Tesseract hangs (CDN issue, WASM error), fail gracefully.
+      const timeout$ = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 45_000)
+      );
+
+      const result = await Promise.race([
+        worker.recognize(this.selectedFile!),
+        timeout$,
+      ]) as Awaited<ReturnType<typeof worker.recognize>>;
+
       await worker.terminate();
 
-      this.extractedText = data.text.trim();
-      this.progress = 75;
+      this.extractedText = result.data.text.trim();
+      this.progress = 88;
+      this.statusText = 'Convirtiendo a LaTeX...';
+      this.cdr.detectChanges();
 
-      // Step 2: client-side heuristic conversion (MathOcrService — zero external deps)
+      // Step 2: client-side heuristic conversion (MathOcrService — zero external deps).
       this.extractedLatex = this.mathOcr.convert(this.extractedText);
-      this.progress = 85;
+      this.progress = 95;
+      this.cdr.detectChanges();
 
-      // Step 3: server-side conversion pass (same algorithm in Java, for verification)
+      // Step 3: optional server-side verification pass.
       this.api.post<{ latex: string }>('ocr/convert', { text: this.extractedText })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (res) => {
-            // Use server result only if it produces a longer/richer conversion
             if (res.latex && res.latex.length > this.extractedLatex.length) {
               this.extractedLatex = res.latex;
             }
             this.progress = 100;
             this.state = 'done';
+            this.cdr.detectChanges();
           },
           error: () => {
-            // Server pass failed — client result is still valid
             this.progress = 100;
             this.state = 'done';
+            this.cdr.detectChanges();
           },
         });
 
-    } catch {
+    } catch (err: any) {
       this.state = 'error';
-      this.errorMsg = 'Error al procesar la imagen. Verifica que sea legible.';
+      this.errorMsg = err?.message === 'timeout'
+        ? 'Tiempo de espera agotado (45 s). Intenta con una imagen más pequeña o clara.'
+        : 'Error al procesar la imagen. Verifica que sea legible.';
+      this.cdr.detectChanges();
     }
   }
 
   copyLatex(): void {
     navigator.clipboard.writeText(this.extractedLatex).then(() => {
       this.copied = true;
-      setTimeout(() => (this.copied = false), 2000);
+      this.cdr.detectChanges();
+      setTimeout(() => {
+        this.copied = false;
+        this.cdr.detectChanges();
+      }, 2000);
     });
   }
 
@@ -135,6 +184,8 @@ export class OcrComponent implements OnDestroy {
     this.extractedLatex = '';
     this.state = 'idle';
     this.progress = 0;
+    this.statusText = 'Iniciando...';
     this.errorMsg = '';
+    this.cdr.detectChanges();
   }
 }
