@@ -75,14 +75,12 @@ export class OcrComponent implements OnDestroy {
     reader.readAsDataURL(file);
   }
 
-  // ─── Image preprocessing for handwriting ──────────────────────────────────
-  // Pipeline: scale → channel-mix → box blur → adaptive threshold.
+  // ─── Image preprocessing para escritura a mano ────────────────────────────
+  // Pipeline: escalar → mezcla de canales (suprimir cuadrícula) → umbral adaptativo local.
   //
-  // Grid suppression: blue grid lines have high B, low R.
-  // Channel mix 1.6R + 0.4G - 0.8B pushes them toward white.
-  // Box blur reduces camera noise before thresholding.
-  // Adaptive threshold uses 96px blocks with a noise floor to avoid
-  // binarizing paper grain as ink in regions with no text.
+  // Las líneas de cuadrícula azul tienen B alto y R bajo.
+  // La mezcla 1.6R + 0.4G - 0.8B las empuja hacia blanco.
+  // El umbral adaptativo por bloques maneja la iluminación desigual de la cámara.
 
   private preprocessHandwriting(file: File): Promise<Blob> {
     return new Promise((resolve, reject) => {
@@ -92,7 +90,7 @@ export class OcrComponent implements OnDestroy {
       img.onload = () => {
         URL.revokeObjectURL(src);
 
-        const MIN_W = 1800;
+        const MIN_W = 1600;
         const MAX_W = 4000;
         let w = img.naturalWidth;
         let h = img.naturalHeight;
@@ -112,22 +110,19 @@ export class OcrComponent implements OnDestroy {
         const d = id.data;
         const n = w * h;
 
-        // Pass 1: channel-mixing grayscale — suppress blue grid lines.
-        // Grid R≈200 G≈220 B≈255 → high (white); ink R≈40 G≈50 B≈120 → low (black)
+        // Paso 1: mezcla de canales — suprime líneas de cuadrícula azul.
+        // Cuadrícula R≈200 G≈220 B≈255 → valor alto (blanco)
+        // Tinta      R≈40  G≈50  B≈120 → valor bajo  (negro)
         const gray = new Float32Array(n);
         for (let i = 0; i < n; i++) {
           const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
           gray[i] = Math.min(255, Math.max(0, 1.6 * r + 0.4 * g - 0.8 * b));
         }
 
-        // Pass 2: horizontal + vertical box blur (radius 2) to kill camera noise.
-        // Noise binarizes as ink and then gets picked up as false characters.
-        const blurred = this.boxBlur(gray, w, h, 2);
-
-        // Pass 3: local adaptive threshold (96px blocks).
-        // Noise floor: if local mean > 215 (paper-only block), use 97% to avoid
-        // binarizing paper grain. Text blocks use 85% to cleanly separate ink.
-        const BLOCK = 96;
+        // Paso 2: umbral adaptativo local (bloques de 64px).
+        // Umbral = 88% del promedio local → separa tinta del papel correctamente
+        // sin importar si la foto está bien o mal iluminada en cada zona.
+        const BLOCK = 64;
         const binary = new Uint8Array(n);
         const cols = Math.ceil(w / BLOCK);
         const rows = Math.ceil(h / BLOCK);
@@ -141,21 +136,20 @@ export class OcrComponent implements OnDestroy {
             let sum = 0, cnt = 0;
             for (let y = y0; y < y1; y++) {
               for (let x = x0; x < x1; x++) {
-                sum += blurred[y * w + x]; cnt++;
+                sum += gray[y * w + x]; cnt++;
               }
             }
-            const mean = sum / cnt;
-            const localT = mean > 215 ? mean * 0.97 : mean * 0.85;
+            const localT = (sum / cnt) * 0.88;
 
             for (let y = y0; y < y1; y++) {
               for (let x = x0; x < x1; x++) {
-                binary[y * w + x] = blurred[y * w + x] <= localT ? 0 : 255;
+                binary[y * w + x] = gray[y * w + x] <= localT ? 0 : 255;
               }
             }
           }
         }
 
-        // Pass 4: write result back.
+        // Paso 3: escribir resultado binarizado.
         for (let i = 0; i < n; i++) {
           d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = binary[i];
           d[i * 4 + 3] = 255;
@@ -171,34 +165,6 @@ export class OcrComponent implements OnDestroy {
       img.onerror = () => reject(new Error('No se pudo cargar la imagen'));
       img.src = src;
     });
-  }
-
-  // Fast separable box blur — two O(n) passes instead of O(n*r²).
-  private boxBlur(src: Float32Array, w: number, h: number, r: number): Float32Array {
-    const tmp = new Float32Array(src.length);
-    const d = 2 * r + 1;
-    // Horizontal pass
-    for (let y = 0; y < h; y++) {
-      let s = 0;
-      for (let x = 0; x < r; x++) s += src[y * w + x];
-      for (let x = 0; x < w; x++) {
-        s += src[y * w + Math.min(w - 1, x + r)];
-        s -= src[y * w + Math.max(0, x - r - 1)];
-        tmp[y * w + x] = s / d;
-      }
-    }
-    const out = new Float32Array(tmp.length);
-    // Vertical pass
-    for (let x = 0; x < w; x++) {
-      let s = 0;
-      for (let y = 0; y < r; y++) s += tmp[y * w + x];
-      for (let y = 0; y < h; y++) {
-        s += tmp[Math.min(h - 1, y + r) * w + x];
-        s -= tmp[Math.max(0, y - r - 1) * w + x];
-        out[y * w + x] = s / d;
-      }
-    }
-    return out;
   }
 
   async extract(): Promise<void> {
@@ -254,10 +220,9 @@ export class OcrComponent implements OnDestroy {
         },
       });
 
-      // PSM 3 = fully automatic page segmentation (no OSD).
-      // Handles tilted notebook pages better than PSM 6/11 by auto-detecting columns.
+      // PSM 6 = bloque de texto uniforme. Mejor para páginas de cuaderno.
       await (worker as any).setParameters({
-        tessedit_pageseg_mode: '3',
+        tessedit_pageseg_mode: '6',
       });
 
       const timeout$ = new Promise<never>((_, reject) =>
