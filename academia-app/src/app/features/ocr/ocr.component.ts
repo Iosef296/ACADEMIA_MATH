@@ -86,9 +86,10 @@ export class OcrComponent implements OnDestroy {
     try {
       const { createWorker } = await import('tesseract.js');
 
-      // 'eng' is smaller (1.8 MB vs 5 MB for 'spa') and more reliable on CDN.
-      // Latin characters in Spanish are handled correctly by the English model.
+      // langPath points to our own server (public/tessdata/) — no CDN dependency.
+      // eng.traineddata.gz is served by nginx with Content-Encoding: gzip.
       const worker = await createWorker('eng', 1, {
+        langPath: '/tessdata',
         logger: (m: any) => {
           // Logger runs outside Angular zone — NgZone.run() is required.
           this.ngZone.run(() => {
@@ -158,10 +159,11 @@ export class OcrComponent implements OnDestroy {
         });
 
     } catch (err: any) {
+      console.error('[OCR] Error:', err);
       this.state = 'error';
       this.errorMsg = err?.message === 'timeout'
         ? 'Tiempo de espera agotado (45 s). Intenta con una imagen más pequeña o clara.'
-        : 'Error al procesar la imagen. Verifica que sea legible.';
+        : `Error al procesar la imagen: ${err?.message ?? 'desconocido'}`;
       this.cdr.detectChanges();
     }
   }
