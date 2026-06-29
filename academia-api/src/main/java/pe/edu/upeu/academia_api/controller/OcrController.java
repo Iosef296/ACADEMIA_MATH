@@ -18,11 +18,12 @@ import java.util.Objects;
 @RequestMapping("/ocr")
 public class OcrController {
 
-    @Value("${groq.api.key:}")
-    private String groqApiKey;
+    @Value("${openrouter.api.key:}")
+    private String openRouterKey;
 
-    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-    private static final String MODEL    = "llama-3.2-11b-vision-preview";
+    private static final String OR_URL   = "https://openrouter.ai/api/v1/chat/completions";
+    // Qwen2-VL: best free model for handwritten math and technical documents
+    private static final String MODEL    = "qwen/qwen2-vl-7b-instruct:free";
 
     private static final String PROMPT =
         "Eres un experto en matemáticas. Esta imagen contiene ejercicios o apuntes " +
@@ -35,18 +36,17 @@ public class OcrController {
             @RequestParam("image") MultipartFile image,
             @RequestParam(value = "text", required = false, defaultValue = "") String text) {
 
-        if (!groqApiKey.isBlank()) {
+        if (!openRouterKey.isBlank()) {
             try {
                 String base64   = Base64.getEncoder().encodeToString(image.getBytes());
                 String mimeType = Objects.requireNonNullElse(image.getContentType(), "image/jpeg");
-                String latex    = callGroq(base64, mimeType);
+                String latex    = callOpenRouter(base64, mimeType);
                 return ResponseEntity.ok(Map.of("latex", latex, "text", latex));
             } catch (Exception e) {
-                System.err.println("[OCR] Groq error: " + e.getMessage());
+                System.err.println("[OCR] OpenRouter error: " + e.getMessage());
             }
         }
 
-        // Fallback cuando no hay API key
         if (text.isBlank()) return ResponseEntity.ok(Map.of("latex", "", "text", ""));
         return ResponseEntity.ok(Map.of("latex", MathLatexConverter.convert(text), "text", text));
     }
@@ -58,11 +58,10 @@ public class OcrController {
         return ResponseEntity.ok(Map.of("latex", MathLatexConverter.convert(text)));
     }
 
-    private String callGroq(String base64Image, String mimeType) throws Exception {
+    private String callOpenRouter(String base64Image, String mimeType) throws Exception {
         RestTemplate rt = new RestTemplate();
 
-        // Groq usa formato compatible con OpenAI
-        Map<String, Object> textContent = Map.of("type", "text", "text", PROMPT);
+        Map<String, Object> textContent  = Map.of("type", "text", "text", PROMPT);
         Map<String, Object> imageContent = Map.of(
             "type", "image_url",
             "image_url", Map.of("url", "data:" + mimeType + ";base64," + base64Image)
@@ -79,10 +78,12 @@ public class OcrController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(groqApiKey);
+        headers.setBearerAuth(openRouterKey);
+        headers.set("HTTP-Referer", "https://thorough-acceptance-production-2a5e.up.railway.app");
+        headers.set("X-Title", "MathLearn OCR");
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(reqBody, headers);
-        ResponseEntity<String> resp = rt.postForEntity(GROQ_URL, entity, String.class);
+        ResponseEntity<String> resp = rt.postForEntity(OR_URL, entity, String.class);
 
         ObjectMapper om = new ObjectMapper();
         JsonNode root = om.readTree(resp.getBody());
