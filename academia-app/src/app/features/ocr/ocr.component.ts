@@ -76,8 +76,12 @@ export class OcrComponent implements OnDestroy {
   }
 
   // ─── Image preprocessing for handwriting ──────────────────────────────────
-  // Optimized for handwritten math: grayscale → Otsu binarization → upscale.
-  // Tesseract LSTM performs significantly better on binarized black-on-white images.
+  // Pipeline: scale → channel-mix (suppress notebook grid) → local adaptive threshold.
+  //
+  // Key insight for grid notebooks: grid lines are light blue/cyan (high B, low R),
+  // handwritten ink is dark blue/black (low R, low B). By weighting R heavily and
+  // subtracting B we make grid lines appear nearly white while ink stays dark.
+  // Local adaptive threshold then handles uneven lighting from phone camera angles.
 
   private preprocessHandwriting(file: File): Promise<Blob> {
     return new Promise((resolve, reject) => {
@@ -87,9 +91,9 @@ export class OcrComponent implements OnDestroy {
       img.onload = () => {
         URL.revokeObjectURL(src);
 
-        // Scale: upscale small images (phones, notebook photos), cap very large ones.
-        const MIN_W = 1400;
-        const MAX_W = 3800;
+        // Scale: upscale small phone photos, cap very large ones.
+        const MIN_W = 1600;
+        const MAX_W = 4000;
         let w = img.naturalWidth;
         let h = img.naturalHeight;
         if (w < MIN_W) { const s = MIN_W / w; w = MIN_W; h = Math.round(h * s); }
@@ -100,7 +104,6 @@ export class OcrComponent implements OnDestroy {
         canvas.height = h;
         const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
 
-        // White background prevents transparent-PNG artifacts.
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, w, h);
         ctx.drawImage(img, 0, 0, w, h);
@@ -109,19 +112,52 @@ export class OcrComponent implements OnDestroy {
         const d = id.data;
         const n = w * h;
 
-        // Pass 1: luminance grayscale (ITU-R BT.601 weights).
+        // Pass 1: channel-mixing grayscale that suppresses blue grid lines.
+        // Grid lines: R≈200 G≈220 B≈255  →  mixed value ≈ high (white)
+        // Dark ink:   R≈40  G≈50  B≈120  →  mixed value ≈ low  (black)
+        // Paper:      R≈250 G≈255 B≈255  →  mixed value ≈ high (white)
+        // Formula: emphasize R, penalize B → blue objects get lighter.
         const gray = new Float32Array(n);
         for (let i = 0; i < n; i++) {
-          gray[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+          const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+          // Clamp to [0,255]
+          gray[i] = Math.min(255, Math.max(0, 1.6 * r + 0.4 * g - 0.8 * b));
         }
 
-        // Pass 2: Otsu's method — finds optimal ink/paper threshold automatically.
-        const threshold = this.otsuThreshold(gray, n);
+        // Pass 2: local adaptive threshold (block size 48px).
+        // Global Otsu fails with uneven phone-camera lighting; local handles gradients.
+        const BLOCK = 48;
+        const binary = new Uint8Array(n);
+        const cols = Math.ceil(w / BLOCK);
+        const rows = Math.ceil(h / BLOCK);
 
-        // Pass 3: binarize — pure black (ink) or white (paper).
+        for (let br = 0; br < rows; br++) {
+          for (let bc = 0; bc < cols; bc++) {
+            const x0 = bc * BLOCK, y0 = br * BLOCK;
+            const x1 = Math.min(x0 + BLOCK, w);
+            const y1 = Math.min(y0 + BLOCK, h);
+
+            // Local mean for this block.
+            let sum = 0, cnt = 0;
+            for (let y = y0; y < y1; y++) {
+              for (let x = x0; x < x1; x++) {
+                sum += gray[y * w + x]; cnt++;
+              }
+            }
+            // Bias: ink should be well below local mean → use 88% of mean.
+            const localT = (sum / cnt) * 0.88;
+
+            for (let y = y0; y < y1; y++) {
+              for (let x = x0; x < x1; x++) {
+                binary[y * w + x] = gray[y * w + x] <= localT ? 0 : 255;
+              }
+            }
+          }
+        }
+
+        // Pass 3: write binarized result back.
         for (let i = 0; i < n; i++) {
-          const v = gray[i] <= threshold ? 0 : 255;
-          d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v;
+          d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = binary[i];
           d[i * 4 + 3] = 255;
         }
 
@@ -136,31 +172,6 @@ export class OcrComponent implements OnDestroy {
       img.src = src;
     });
   }
-
-  // Otsu's global thresholding: maximizes inter-class variance between ink and paper.
-  private otsuThreshold(gray: Float32Array, n: number): number {
-    const hist = new Array(256).fill(0);
-    for (let i = 0; i < n; i++) hist[Math.round(gray[i])]++;
-
-    let sum = 0;
-    for (let i = 0; i < 256; i++) sum += i * hist[i];
-
-    let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
-    for (let i = 0; i < 256; i++) {
-      wB += hist[i];
-      if (!wB) continue;
-      const wF = n - wB;
-      if (!wF) break;
-      sumB += i * hist[i];
-      const mB = sumB / wB;
-      const mF = (sum - sumB) / wF;
-      const betweenVar = wB * wF * (mB - mF) ** 2;
-      if (betweenVar > maxVar) { maxVar = betweenVar; threshold = i; }
-    }
-    return threshold;
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
 
   async extract(): Promise<void> {
     if (!this.selectedFile) return;
