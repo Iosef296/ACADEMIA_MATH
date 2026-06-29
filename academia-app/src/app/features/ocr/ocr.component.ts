@@ -84,7 +84,16 @@ export class OcrComponent implements OnDestroy {
     this.cdr.detectChanges();
 
     try {
-      const { createWorker } = await import('tesseract.js');
+      // Tesseract.js v7 ships createWorker on the default export.
+      // Named destructuring fails with dynamic import on v7.
+      const TesseractMod = await import('tesseract.js');
+      const createWorker: Function =
+        (TesseractMod as any).createWorker ??
+        (TesseractMod as any).default?.createWorker;
+
+      if (typeof createWorker !== 'function') {
+        throw new Error('Tesseract.js no pudo cargarse (createWorker no encontrado)');
+      }
 
       // langPath points to our own server (public/tessdata/) — no CDN dependency.
       // eng.traineddata.gz is served by nginx with Content-Encoding: gzip.
@@ -123,13 +132,13 @@ export class OcrComponent implements OnDestroy {
       );
 
       const result = await Promise.race([
-        worker.recognize(this.selectedFile!),
+        (worker as any).recognize(this.selectedFile!),
         timeout$,
-      ]) as Awaited<ReturnType<typeof worker.recognize>>;
+      ]) as any;
 
-      await worker.terminate();
+      await (worker as any).terminate();
 
-      this.extractedText = result.data.text.trim();
+      this.extractedText = (result?.data?.text ?? result?.text ?? '').trim();
       this.progress = 88;
       this.statusText = 'Convirtiendo a LaTeX...';
       this.cdr.detectChanges();
