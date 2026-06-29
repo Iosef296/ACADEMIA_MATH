@@ -76,12 +76,13 @@ export class OcrComponent implements OnDestroy {
   }
 
   // ─── Image preprocessing for handwriting ──────────────────────────────────
-  // Pipeline: scale → channel-mix (suppress notebook grid) → local adaptive threshold.
+  // Pipeline: scale → channel-mix → box blur → adaptive threshold.
   //
-  // Key insight for grid notebooks: grid lines are light blue/cyan (high B, low R),
-  // handwritten ink is dark blue/black (low R, low B). By weighting R heavily and
-  // subtracting B we make grid lines appear nearly white while ink stays dark.
-  // Local adaptive threshold then handles uneven lighting from phone camera angles.
+  // Grid suppression: blue grid lines have high B, low R.
+  // Channel mix 1.6R + 0.4G - 0.8B pushes them toward white.
+  // Box blur reduces camera noise before thresholding.
+  // Adaptive threshold uses 96px blocks with a noise floor to avoid
+  // binarizing paper grain as ink in regions with no text.
 
   private preprocessHandwriting(file: File): Promise<Blob> {
     return new Promise((resolve, reject) => {
@@ -91,8 +92,7 @@ export class OcrComponent implements OnDestroy {
       img.onload = () => {
         URL.revokeObjectURL(src);
 
-        // Scale: upscale small phone photos, cap very large ones.
-        const MIN_W = 1600;
+        const MIN_W = 1800;
         const MAX_W = 4000;
         let w = img.naturalWidth;
         let h = img.naturalHeight;
@@ -112,21 +112,22 @@ export class OcrComponent implements OnDestroy {
         const d = id.data;
         const n = w * h;
 
-        // Pass 1: channel-mixing grayscale that suppresses blue grid lines.
-        // Grid lines: R≈200 G≈220 B≈255  →  mixed value ≈ high (white)
-        // Dark ink:   R≈40  G≈50  B≈120  →  mixed value ≈ low  (black)
-        // Paper:      R≈250 G≈255 B≈255  →  mixed value ≈ high (white)
-        // Formula: emphasize R, penalize B → blue objects get lighter.
+        // Pass 1: channel-mixing grayscale — suppress blue grid lines.
+        // Grid R≈200 G≈220 B≈255 → high (white); ink R≈40 G≈50 B≈120 → low (black)
         const gray = new Float32Array(n);
         for (let i = 0; i < n; i++) {
           const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
-          // Clamp to [0,255]
           gray[i] = Math.min(255, Math.max(0, 1.6 * r + 0.4 * g - 0.8 * b));
         }
 
-        // Pass 2: local adaptive threshold (block size 48px).
-        // Global Otsu fails with uneven phone-camera lighting; local handles gradients.
-        const BLOCK = 48;
+        // Pass 2: horizontal + vertical box blur (radius 2) to kill camera noise.
+        // Noise binarizes as ink and then gets picked up as false characters.
+        const blurred = this.boxBlur(gray, w, h, 2);
+
+        // Pass 3: local adaptive threshold (96px blocks).
+        // Noise floor: if local mean > 215 (paper-only block), use 97% to avoid
+        // binarizing paper grain. Text blocks use 85% to cleanly separate ink.
+        const BLOCK = 96;
         const binary = new Uint8Array(n);
         const cols = Math.ceil(w / BLOCK);
         const rows = Math.ceil(h / BLOCK);
@@ -137,41 +138,26 @@ export class OcrComponent implements OnDestroy {
             const x1 = Math.min(x0 + BLOCK, w);
             const y1 = Math.min(y0 + BLOCK, h);
 
-            // Local mean for this block.
             let sum = 0, cnt = 0;
             for (let y = y0; y < y1; y++) {
               for (let x = x0; x < x1; x++) {
-                sum += gray[y * w + x]; cnt++;
+                sum += blurred[y * w + x]; cnt++;
               }
             }
-            // Bias: ink should be well below local mean → use 88% of mean.
-            const localT = (sum / cnt) * 0.88;
+            const mean = sum / cnt;
+            const localT = mean > 215 ? mean * 0.97 : mean * 0.85;
 
             for (let y = y0; y < y1; y++) {
               for (let x = x0; x < x1; x++) {
-                binary[y * w + x] = gray[y * w + x] <= localT ? 0 : 255;
+                binary[y * w + x] = blurred[y * w + x] <= localT ? 0 : 255;
               }
             }
           }
         }
 
-        // Pass 3: morphological dilation — thickens thin pen strokes by 1px.
-        // Tesseract LSTM was trained on printed text (thicker strokes than pen).
-        // Without dilation, thin handwriting gaps cause character mis-segmentation.
-        const dilated = new Uint8Array(n).fill(255);
-        for (let y = 1; y < h - 1; y++) {
-          for (let x = 1; x < w - 1; x++) {
-            if (binary[y * w + x] === 0) {
-              dilated[(y - 1) * w + (x - 1)] = 0; dilated[(y - 1) * w + x] = 0; dilated[(y - 1) * w + (x + 1)] = 0;
-              dilated[y * w + (x - 1)] = 0;       dilated[y * w + x] = 0;       dilated[y * w + (x + 1)] = 0;
-              dilated[(y + 1) * w + (x - 1)] = 0; dilated[(y + 1) * w + x] = 0; dilated[(y + 1) * w + (x + 1)] = 0;
-            }
-          }
-        }
-
-        // Pass 4: write dilated result back.
+        // Pass 4: write result back.
         for (let i = 0; i < n; i++) {
-          d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = dilated[i];
+          d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = binary[i];
           d[i * 4 + 3] = 255;
         }
 
@@ -185,6 +171,34 @@ export class OcrComponent implements OnDestroy {
       img.onerror = () => reject(new Error('No se pudo cargar la imagen'));
       img.src = src;
     });
+  }
+
+  // Fast separable box blur — two O(n) passes instead of O(n*r²).
+  private boxBlur(src: Float32Array, w: number, h: number, r: number): Float32Array {
+    const tmp = new Float32Array(src.length);
+    const d = 2 * r + 1;
+    // Horizontal pass
+    for (let y = 0; y < h; y++) {
+      let s = 0;
+      for (let x = 0; x < r; x++) s += src[y * w + x];
+      for (let x = 0; x < w; x++) {
+        s += src[y * w + Math.min(w - 1, x + r)];
+        s -= src[y * w + Math.max(0, x - r - 1)];
+        tmp[y * w + x] = s / d;
+      }
+    }
+    const out = new Float32Array(tmp.length);
+    // Vertical pass
+    for (let x = 0; x < w; x++) {
+      let s = 0;
+      for (let y = 0; y < r; y++) s += tmp[y * w + x];
+      for (let y = 0; y < h; y++) {
+        s += tmp[Math.min(h - 1, y + r) * w + x];
+        s -= tmp[Math.max(0, y - r - 1) * w + x];
+        out[y * w + x] = s / d;
+      }
+    }
+    return out;
   }
 
   async extract(): Promise<void> {
@@ -240,10 +254,10 @@ export class OcrComponent implements OnDestroy {
         },
       });
 
-      // PSM 11 = sparse text, find as much text as possible.
-      // Better than PSM 6 for handwritten notes where text isn't a clean uniform block.
+      // PSM 3 = fully automatic page segmentation (no OSD).
+      // Handles tilted notebook pages better than PSM 6/11 by auto-detecting columns.
       await (worker as any).setParameters({
-        tessedit_pageseg_mode: '11',
+        tessedit_pageseg_mode: '3',
       });
 
       const timeout$ = new Promise<never>((_, reject) =>
