@@ -26,7 +26,7 @@ export class RankingComponent implements OnInit, OnDestroy {
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    this.api.get<RankingEntry[]>('ranking')
+    this.api.get<RankingEntry[]>('gamification/ranking')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
@@ -52,7 +52,7 @@ export class RankingComponent implements OnInit, OnDestroy {
     this.visibilityUpdating = true;
     this.rankingVisible = !this.rankingVisible;
     this.api
-      .put('ranking/visibility', { visible: this.rankingVisible })
+      .put('gamification/ranking/visibility', { visible: this.rankingVisible })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => { this.visibilityUpdating = false; },

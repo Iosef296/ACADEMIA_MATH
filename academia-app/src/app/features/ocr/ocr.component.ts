@@ -2,6 +2,7 @@ import { Component, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../core/services/api.service';
+import { MathOcrService } from '../../core/services/math-ocr.service';
 
 type OcrMode = 'upload' | 'camera';
 type OcrState = 'idle' | 'processing' | 'done' | 'error';
@@ -27,7 +28,7 @@ export class OcrComponent implements OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private mathOcr: MathOcrService) {}
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -75,12 +76,12 @@ export class OcrComponent implements OnDestroy {
     this.errorMsg = '';
 
     try {
-      // Client-side OCR with Tesseract.js
+      // Step 1: client-side OCR with Tesseract.js
       const { createWorker } = await import('tesseract.js');
       const worker = await createWorker('spa', 1, {
         logger: (m: any) => {
           if (m.status === 'recognizing text') {
-            this.progress = Math.round(m.progress * 80);
+            this.progress = Math.round(m.progress * 70);
           }
         },
       });
@@ -89,25 +90,31 @@ export class OcrComponent implements OnDestroy {
       await worker.terminate();
 
       this.extractedText = data.text.trim();
-      this.progress = 90;
+      this.progress = 75;
 
-      // Send to backend for LaTeX conversion
-      this.api
-        .upload<{ latex: string }>('ocr/extract', this.selectedFile, 'image')
+      // Step 2: client-side heuristic conversion (MathOcrService — zero external deps)
+      this.extractedLatex = this.mathOcr.convert(this.extractedText);
+      this.progress = 85;
+
+      // Step 3: server-side conversion pass (same algorithm in Java, for verification)
+      this.api.post<{ latex: string }>('ocr/convert', { text: this.extractedText })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (res) => {
-            this.extractedLatex = res.latex;
+            // Use server result only if it produces a longer/richer conversion
+            if (res.latex && res.latex.length > this.extractedLatex.length) {
+              this.extractedLatex = res.latex;
+            }
             this.progress = 100;
             this.state = 'done';
           },
           error: () => {
-            // Fallback: use raw text if backend fails
-            this.extractedLatex = this.extractedText;
+            // Server pass failed — client result is still valid
             this.progress = 100;
             this.state = 'done';
           },
         });
+
     } catch {
       this.state = 'error';
       this.errorMsg = 'Error al procesar la imagen. Verifica que sea legible.';

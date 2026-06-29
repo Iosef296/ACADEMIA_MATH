@@ -25,8 +25,8 @@ export class BadgesComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     Promise.all([
-      firstValueFrom(this.api.get<Badge[]>('badges')),
-      firstValueFrom(this.api.get<Badge[]>('badges/mine')),
+      firstValueFrom(this.api.get<Badge[]>('gamification/badges')),
+      firstValueFrom(this.api.get<Badge[]>('gamification/badges/mine')),
     ]).then(([all, mine]) => {
       const earnedIds = new Set((mine ?? []).map((b) => b.id));
       this.badges = (all ?? []).map((b) => ({
