@@ -155,9 +155,23 @@ export class OcrComponent implements OnDestroy {
           }
         }
 
-        // Pass 3: write binarized result back.
+        // Pass 3: morphological dilation — thickens thin pen strokes by 1px.
+        // Tesseract LSTM was trained on printed text (thicker strokes than pen).
+        // Without dilation, thin handwriting gaps cause character mis-segmentation.
+        const dilated = new Uint8Array(n).fill(255);
+        for (let y = 1; y < h - 1; y++) {
+          for (let x = 1; x < w - 1; x++) {
+            if (binary[y * w + x] === 0) {
+              dilated[(y - 1) * w + (x - 1)] = 0; dilated[(y - 1) * w + x] = 0; dilated[(y - 1) * w + (x + 1)] = 0;
+              dilated[y * w + (x - 1)] = 0;       dilated[y * w + x] = 0;       dilated[y * w + (x + 1)] = 0;
+              dilated[(y + 1) * w + (x - 1)] = 0; dilated[(y + 1) * w + x] = 0; dilated[(y + 1) * w + (x + 1)] = 0;
+            }
+          }
+        }
+
+        // Pass 4: write dilated result back.
         for (let i = 0; i < n; i++) {
-          d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = binary[i];
+          d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = dilated[i];
           d[i * 4 + 3] = 255;
         }
 
@@ -226,10 +240,10 @@ export class OcrComponent implements OnDestroy {
         },
       });
 
-      // PSM 6 = single uniform block of text.
-      // Best for handwritten pages/paragraphs; PSM 11 suits scattered notes.
+      // PSM 11 = sparse text, find as much text as possible.
+      // Better than PSM 6 for handwritten notes where text isn't a clean uniform block.
       await (worker as any).setParameters({
-        tessedit_pageseg_mode: '6',
+        tessedit_pageseg_mode: '11',
       });
 
       const timeout$ = new Promise<never>((_, reject) =>
