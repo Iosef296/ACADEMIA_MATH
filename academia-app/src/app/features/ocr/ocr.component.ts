@@ -75,17 +75,109 @@ export class OcrComponent implements OnDestroy {
     reader.readAsDataURL(file);
   }
 
+  // ─── Image preprocessing for handwriting ──────────────────────────────────
+  // Optimized for handwritten math: grayscale → Otsu binarization → upscale.
+  // Tesseract LSTM performs significantly better on binarized black-on-white images.
+
+  private preprocessHandwriting(file: File): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const src = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(src);
+
+        // Scale: upscale small images (phones, notebook photos), cap very large ones.
+        const MIN_W = 1400;
+        const MAX_W = 3800;
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (w < MIN_W) { const s = MIN_W / w; w = MIN_W; h = Math.round(h * s); }
+        if (w > MAX_W) { const s = MAX_W / w; w = MAX_W; h = Math.round(h * s); }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+
+        // White background prevents transparent-PNG artifacts.
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+
+        const id = ctx.getImageData(0, 0, w, h);
+        const d = id.data;
+        const n = w * h;
+
+        // Pass 1: luminance grayscale (ITU-R BT.601 weights).
+        const gray = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+          gray[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+        }
+
+        // Pass 2: Otsu's method — finds optimal ink/paper threshold automatically.
+        const threshold = this.otsuThreshold(gray, n);
+
+        // Pass 3: binarize — pure black (ink) or white (paper).
+        for (let i = 0; i < n; i++) {
+          const v = gray[i] <= threshold ? 0 : 255;
+          d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v;
+          d[i * 4 + 3] = 255;
+        }
+
+        ctx.putImageData(id, 0, 0);
+        canvas.toBlob(
+          blob => blob ? resolve(blob) : reject(new Error('Canvas toBlob falló')),
+          'image/png',
+        );
+      };
+
+      img.onerror = () => reject(new Error('No se pudo cargar la imagen'));
+      img.src = src;
+    });
+  }
+
+  // Otsu's global thresholding: maximizes inter-class variance between ink and paper.
+  private otsuThreshold(gray: Float32Array, n: number): number {
+    const hist = new Array(256).fill(0);
+    for (let i = 0; i < n; i++) hist[Math.round(gray[i])]++;
+
+    let sum = 0;
+    for (let i = 0; i < 256; i++) sum += i * hist[i];
+
+    let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
+    for (let i = 0; i < 256; i++) {
+      wB += hist[i];
+      if (!wB) continue;
+      const wF = n - wB;
+      if (!wF) break;
+      sumB += i * hist[i];
+      const mB = sumB / wB;
+      const mF = (sum - sumB) / wF;
+      const betweenVar = wB * wF * (mB - mF) ** 2;
+      if (betweenVar > maxVar) { maxVar = betweenVar; threshold = i; }
+    }
+    return threshold;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+
   async extract(): Promise<void> {
     if (!this.selectedFile) return;
     this.state = 'processing';
     this.progress = 2;
-    this.statusText = 'Cargando motor OCR...';
+    this.statusText = 'Preprocesando imagen...';
     this.errorMsg = '';
     this.cdr.detectChanges();
 
     try {
+      // Step 1: preprocess for handwriting recognition.
+      const processedBlob = await this.preprocessHandwriting(this.selectedFile);
+      this.progress = 8;
+      this.statusText = 'Cargando motor OCR...';
+      this.cdr.detectChanges();
+
       // Tesseract.js v7 ships createWorker on the default export.
-      // Named destructuring fails with dynamic import on v7.
       const TesseractMod = await import('tesseract.js');
       const createWorker: Function =
         (TesseractMod as any).createWorker ??
@@ -95,30 +187,27 @@ export class OcrComponent implements OnDestroy {
         throw new Error('Tesseract.js no pudo cargarse (createWorker no encontrado)');
       }
 
-      // langPath points to our own server (public/tessdata/) — no CDN dependency.
-      // eng.traineddata.gz is served by nginx with Content-Encoding: gzip.
       const worker = await createWorker('eng', 1, {
-        langPath: '/tessdata',
+        langPath: '/tessdata',   // self-hosted, no CDN dependency
         logger: (m: any) => {
-          // Logger runs outside Angular zone — NgZone.run() is required.
           this.ngZone.run(() => {
             switch (m.status) {
               case 'loading tesseract core':
-                this.progress = 8;
+                this.progress = 14;
                 this.statusText = 'Cargando motor OCR...';
                 break;
               case 'loading language traineddata':
-                this.progress = 20;
-                this.statusText = 'Cargando datos de idioma...';
+                this.progress = 24;
+                this.statusText = 'Cargando modelo de escritura...';
                 break;
               case 'initializing tesseract':
               case 'initializing api':
-                this.progress = 30;
+                this.progress = 34;
                 this.statusText = 'Inicializando...';
                 break;
               case 'recognizing text':
-                this.progress = 30 + Math.round((m.progress ?? 0) * 55);
-                this.statusText = 'Reconociendo texto...';
+                this.progress = 34 + Math.round((m.progress ?? 0) * 52);
+                this.statusText = 'Reconociendo escritura...';
                 break;
             }
             this.cdr.detectChanges();
@@ -126,29 +215,32 @@ export class OcrComponent implements OnDestroy {
         },
       });
 
-      // Timeout guard: if Tesseract hangs (CDN issue, WASM error), fail gracefully.
+      // PSM 6 = single uniform block of text.
+      // Best for handwritten pages/paragraphs; PSM 11 suits scattered notes.
+      await (worker as any).setParameters({
+        tessedit_pageseg_mode: '6',
+      });
+
       const timeout$ = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 45_000)
+        setTimeout(() => reject(new Error('timeout')), 60_000)
       );
 
       const result = await Promise.race([
-        (worker as any).recognize(this.selectedFile!),
+        (worker as any).recognize(processedBlob),
         timeout$,
       ]) as any;
 
       await (worker as any).terminate();
 
       this.extractedText = (result?.data?.text ?? result?.text ?? '').trim();
-      this.progress = 88;
+      this.progress = 90;
       this.statusText = 'Convirtiendo a LaTeX...';
       this.cdr.detectChanges();
 
-      // Step 2: client-side heuristic conversion (MathOcrService — zero external deps).
       this.extractedLatex = this.mathOcr.convert(this.extractedText);
-      this.progress = 95;
+      this.progress = 96;
       this.cdr.detectChanges();
 
-      // Step 3: optional server-side verification pass.
       this.api.post<{ latex: string }>('ocr/convert', { text: this.extractedText })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
@@ -171,8 +263,8 @@ export class OcrComponent implements OnDestroy {
       console.error('[OCR] Error:', err);
       this.state = 'error';
       this.errorMsg = err?.message === 'timeout'
-        ? 'Tiempo de espera agotado (45 s). Intenta con una imagen más pequeña o clara.'
-        : `Error al procesar la imagen: ${err?.message ?? 'desconocido'}`;
+        ? 'Tiempo de espera agotado (60 s). Intenta con una imagen más pequeña.'
+        : `Error al procesar: ${err?.message ?? 'desconocido'}`;
       this.cdr.detectChanges();
     }
   }
@@ -181,10 +273,7 @@ export class OcrComponent implements OnDestroy {
     navigator.clipboard.writeText(this.extractedLatex).then(() => {
       this.copied = true;
       this.cdr.detectChanges();
-      setTimeout(() => {
-        this.copied = false;
-        this.cdr.detectChanges();
-      }, 2000);
+      setTimeout(() => { this.copied = false; this.cdr.detectChanges(); }, 2000);
     });
   }
 
