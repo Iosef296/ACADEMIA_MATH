@@ -4,7 +4,7 @@ COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
 RUN chmod +x gradlew && ./gradlew --version
 COPY src ./src
-RUN ./gradlew clean bootJar -x test --no-daemon
+RUN ./gradlew clean bootJar -x test --no-daemon --no-build-cache
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
