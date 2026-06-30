@@ -24,10 +24,10 @@ public class OcrController {
     private static final String OR_URL = "https://openrouter.ai/api/v1/chat/completions";
 
     private static final List<String> MODELS = List.of(
-        "google/gemma-4-26b-a4b-it",              // pago, primario
-        "google/gemma-4-26b-a4b-it:free",         // fallback gratis mismo modelo
+        "google/gemma-4-26b-a4b-it:free",
         "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-        "google/gemma-4-31b-it:free"
+        "google/gemma-4-31b-it:free",
+        "nvidia/nemotron-nano-12b-v2-vl:free"
     );
 
     private static final String PROMPT =
