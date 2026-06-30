@@ -4,11 +4,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import pe.edu.upeu.academia_api.entity.DailyMission;
+import pe.edu.upeu.academia_api.entity.UserMissionClaim;
 import pe.edu.upeu.academia_api.repository.DailyMissionRepository;
+import pe.edu.upeu.academia_api.repository.UserMissionClaimRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/missions")
@@ -16,6 +23,7 @@ import java.util.List;
 public class MissionController {
 
     private final DailyMissionRepository repo;
+    private final UserMissionClaimRepository claimRepo;
 
     @GetMapping
     public ResponseEntity<List<DailyMission>> findActive() {
@@ -36,6 +44,18 @@ public class MissionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(repo.save(mission));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<DailyMission> update(@PathVariable Long id, @RequestBody DailyMission mission) {
+        DailyMission existing = repo.findById(id).orElseThrow();
+        existing.setTitle(mission.getTitle());
+        existing.setEmoji(mission.getEmoji());
+        existing.setMissionType(mission.getMissionType());
+        existing.setTargetValue(mission.getTargetValue());
+        existing.setRewardXp(mission.getRewardXp());
+        return ResponseEntity.ok(repo.save(existing));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
@@ -49,5 +69,41 @@ public class MissionController {
         DailyMission m = repo.findById(id).orElseThrow();
         m.setActive(!m.isActive());
         return ResponseEntity.ok(repo.save(m));
+    }
+
+    @PostMapping("/{id}/claim")
+    public ResponseEntity<Map<String, Object>> claim(@PathVariable Long id, Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        if (claimRepo.existsByUserIdAndMissionId(userId, id)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Ya reclamada"));
+        }
+        DailyMission mission = repo.findById(id).orElseThrow();
+        claimRepo.save(UserMissionClaim.builder()
+                .userId(userId)
+                .missionId(id)
+                .claimedAt(LocalDateTime.now())
+                .build());
+        int bonusXp = claimRepo.findByUserId(userId).stream()
+                .mapToInt(c -> repo.findById(c.getMissionId()).map(DailyMission::getRewardXp).orElse(0))
+                .sum();
+        return ResponseEntity.ok(Map.of("bonusXp", bonusXp, "earned", mission.getRewardXp()));
+    }
+
+    @GetMapping("/claimed")
+    public ResponseEntity<List<Long>> getClaimed(Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        List<Long> ids = claimRepo.findByUserId(userId).stream()
+                .map(UserMissionClaim::getMissionId)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ids);
+    }
+
+    @GetMapping("/bonus-xp")
+    public ResponseEntity<Map<String, Integer>> getBonusXp(Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        int bonus = claimRepo.findByUserId(userId).stream()
+                .mapToInt(c -> repo.findById(c.getMissionId()).map(DailyMission::getRewardXp).orElse(0))
+                .sum();
+        return ResponseEntity.ok(Map.of("bonusXp", bonus));
     }
 }
