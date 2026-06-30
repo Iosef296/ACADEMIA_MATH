@@ -110,12 +110,13 @@
                   </svg>
                 </button>
                 <button (click)="openSetLevel(user)"
-                  class="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                  class="flex items-center gap-1 px-2 py-1 text-purple-600 hover:bg-purple-50 rounded-lg transition text-xs font-semibold border border-purple-200"
                   title="Establecer nivel">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                   </svg>
+                  <span>Nv. {{ levelFromXp(user.manualXp ?? 0) }}</span>
                 </button>
                 <button (click)="confirmDelete(user.id)"
                   class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"

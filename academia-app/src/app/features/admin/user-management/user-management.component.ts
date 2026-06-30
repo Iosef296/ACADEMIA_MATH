@@ -9,6 +9,7 @@ interface User {
   email: string;
   role: 'student' | 'teacher' | 'admin';
   created_at: string;
+  manualXp?: number;
 }
 
 @Component({
@@ -111,6 +112,11 @@ export class UserManagementComponent implements OnInit, OnDestroy {
           setTimeout(() => (this.error = ''), 3000);
         },
       });
+  }
+
+  levelFromXp(xp: number): number {
+    if (!xp || xp <= 0) return 1;
+    return Math.max(1, Math.floor((1 + Math.sqrt(1 + 4 * xp / 50)) / 2));
   }
 
   openSetLevel(user: User): void {

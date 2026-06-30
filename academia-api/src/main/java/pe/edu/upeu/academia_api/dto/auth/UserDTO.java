@@ -18,4 +18,5 @@ public class UserDTO {
     private String avatarUrl;
     private LocalDateTime lastAccessAt;
     private LocalDateTime createdAt;
+    private Integer manualXp;
 }

@@ -103,6 +103,7 @@ public class UserServiceImpl implements UserService {
                 .avatarUrl(user.getAvatarUrl())
                 .lastAccessAt(user.getLastAccessAt())
                 .createdAt(user.getCreatedAt())
+                .manualXp(user.getManualXp() != null ? user.getManualXp() : 0)
                 .build();
     }
 }
