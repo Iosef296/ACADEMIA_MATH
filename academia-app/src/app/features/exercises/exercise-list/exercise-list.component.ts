@@ -44,9 +44,10 @@ export class ExerciseListComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.route.queryParams.pipe(
       takeUntil(this.destroy$),
-      distinctUntilChanged((a, b) => a['topicId'] === b['topicId']),
+      distinctUntilChanged((a, b) => a['topicId'] === b['topicId'] && a['difficulty'] === b['difficulty']),
       tap(() => { this.loading = true; this.error = ''; }),
       switchMap((params) => {
+        if (params['difficulty']) this.filterDifficulty = params['difficulty'];
         const p = params['topicId'] ? { topicId: params['topicId'] } : undefined;
         return this.api.get<Exercise[]>('exercises', p).pipe(
           timeout(15000),

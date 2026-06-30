@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Observable, Subject, forkJoin, of } from 'rxjs';
 import { catchError, takeUntil } from 'rxjs/operators';
@@ -44,11 +45,9 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   today = new Date();
 
   moods = [
-    { value: 'happy', label: 'Feliz', emoji: '😊' },
-    { value: 'motivated', label: 'Motivado', emoji: '💪' },
-    { value: 'neutral', label: 'Normal', emoji: '😐' },
-    { value: 'sad', label: 'Triste', emoji: '😔' },
-    { value: 'stressed', label: 'Estresado', emoji: '😰' },
+    { value: 'motivated', label: 'Motivado', emoji: '💪', difficulty: 'advanced' },
+    { value: 'neutral',   label: 'Normal',   emoji: '😐', difficulty: 'intermediate' },
+    { value: 'stressed',  label: 'Estresado', emoji: '😰', difficulty: 'basic' },
   ];
   selectedMood: string | null = null;
   moodSaved = false;
@@ -56,7 +55,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  constructor(private store: Store, private api: ApiService, private cdr: ChangeDetectorRef) {}
+  constructor(private store: Store, private api: ApiService, private cdr: ChangeDetectorRef, private router: Router) {}
 
   ngOnInit(): void {
     this.user$ = this.store.select(selectCurrentUser);
@@ -95,14 +94,9 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   saveMood(mood: string): void {
     if (this.moodSaved) return;
     this.selectedMood = mood;
-    this.api.post('mood', { mood })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.moodSaved = true;
-        },
-        error: (err) => console.error('Error saving mood:', err),
-      });
+    this.api.post('mood', { mood }).pipe(takeUntil(this.destroy$)).subscribe({ error: (err) => console.error('Error saving mood:', err) });
+    const difficulty = this.moods.find(m => m.value === mood)?.difficulty ?? 'intermediate';
+    this.router.navigate(['/exercises'], { queryParams: { difficulty } });
   }
 
   get topTopics(): ProgressSummary[] {
