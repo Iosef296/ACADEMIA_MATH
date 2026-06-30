@@ -192,8 +192,16 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
     return Math.min((this.xpInCurrentLevel / this.xpNeededForNextLevel) * 100, 100);
   }
 
+  get currentLevelReward(): LevelReward | null {
+    return [...this.levelRewards]
+      .filter(r => r.level <= this.currentLevel)
+      .sort((a, b) => b.level - a.level)[0] ?? null;
+  }
+
   get nextLevelReward(): LevelReward | null {
-    return this.levelRewards.find(r => r.level === this.currentLevel + 1) ?? null;
+    return [...this.levelRewards]
+      .filter(r => r.level > this.currentLevel)
+      .sort((a, b) => a.level - b.level)[0] ?? null;
   }
 
   getLevelGradient(level: number): string {

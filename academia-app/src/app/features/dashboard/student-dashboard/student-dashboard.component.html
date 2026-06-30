@@ -42,10 +42,17 @@
         <h1 class="text-3xl font-bold">¡Hola, {{ user.name }}! 👋</h1>
         <p class="text-white text-opacity-70 mt-1 text-sm">Sigue practicando para alcanzar tu meta</p>
       </div>
-      <div class="rounded-xl px-5 py-3 text-center shrink-0 border border-white border-opacity-30"
-        [style.background]="getLevelGradient(currentLevel)">
-        <p class="text-xs text-white text-opacity-80 uppercase tracking-wide font-semibold">Nivel</p>
-        <p class="text-3xl font-bold leading-none mt-1">{{ currentLevel }}</p>
+      <div class="flex flex-col items-end gap-2 shrink-0">
+        <div class="rounded-xl px-5 py-3 text-center border border-white border-opacity-30"
+          [style.background]="getLevelGradient(currentLevel)">
+          <p class="text-xs text-white text-opacity-80 uppercase tracking-wide font-semibold">Nivel</p>
+          <p class="text-3xl font-bold leading-none mt-1">{{ currentLevel }}</p>
+        </div>
+        <div *ngIf="currentLevelReward"
+          class="text-xs bg-white bg-opacity-20 rounded-lg px-3 py-1.5 text-white font-medium flex items-center gap-1.5">
+          <span>{{ currentLevelReward.emoji }}</span>
+          <span>{{ currentLevelReward.title }}</span>
+        </div>
       </div>
     </div>
     <!-- XP progress bar -->
@@ -53,7 +60,7 @@
       <div class="flex justify-between text-xs text-white text-opacity-70 mb-1.5">
         <span>{{ xpInCurrentLevel }} / {{ xpNeededForNextLevel }} XP al siguiente nivel</span>
         <span *ngIf="nextLevelReward">
-          Nivel {{ currentLevel + 1 }} · {{ nextLevelReward.title }} {{ nextLevelReward.emoji }} →
+          Nv. {{ nextLevelReward.level }} · {{ nextLevelReward.title }} {{ nextLevelReward.emoji }} →
         </span>
         <span *ngIf="!nextLevelReward">Nivel {{ currentLevel + 1 }} →</span>
       </div>
