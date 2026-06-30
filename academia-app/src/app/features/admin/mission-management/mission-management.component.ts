@@ -7,6 +7,7 @@ interface DailyMission {
   emoji: string;
   missionType: string;
   targetValue: number;
+  rewardXp: number;
   active: boolean;
 }
 
