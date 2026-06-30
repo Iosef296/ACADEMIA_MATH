@@ -122,47 +122,36 @@
         </a>
       </div>
 
-      <!-- Misiones del día -->
+      <!-- Misiones -->
       <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-        <h2 class="font-semibold text-gray-800 mb-4">🎯 Misiones del día</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-semibold text-gray-800">🎯 Misiones</h2>
+          <span class="text-xs text-gray-400">{{ completedMissionsCount }}/{{ missions.length }} completadas</span>
+        </div>
+
+        <div *ngIf="activeMissions.length === 0 && missions.length > 0" class="text-center py-6">
+          <p class="text-3xl mb-2">🎉</p>
+          <p class="text-sm text-green-600 font-medium">¡Todas las misiones completadas!</p>
+        </div>
+
+        <div *ngIf="missions.length === 0" class="text-center py-6">
+          <p class="text-sm text-gray-400">Cargando misiones...</p>
+        </div>
+
         <div class="space-y-3">
-          <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-            <div class="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center text-lg shrink-0">📝</div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-gray-700">Resolver 3 ejercicios</p>
-              <div class="h-1.5 bg-gray-200 rounded-full mt-1.5 overflow-hidden">
-                <div class="h-full bg-green-400 rounded-full transition-all duration-500"
-                  [style.width.%]="Math.min((totalExercisesSolved / 3) * 100, 100)"></div>
-              </div>
+          <div *ngFor="let m of activeMissions" class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+            <div class="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center text-lg shrink-0">
+              {{ m.emoji }}
             </div>
-            <span class="text-xs text-gray-500 shrink-0">{{ Math.min(totalExercisesSolved, 3) }}/3</span>
-          </div>
-          <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-            <div class="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center text-lg shrink-0">📚</div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-gray-700">Explorar un tema</p>
+              <p class="text-sm font-medium text-gray-700">{{ m.title }}</p>
               <div class="h-1.5 bg-gray-200 rounded-full mt-1.5 overflow-hidden">
                 <div class="h-full bg-blue-400 rounded-full transition-all duration-500"
-                  [style.width.%]="progressList.length > 0 ? 100 : 0"></div>
+                  [style.width.%]="getMissionPercent(m)"></div>
               </div>
             </div>
-            <span class="text-xs shrink-0"
-              [class]="progressList.length > 0 ? 'text-green-600 font-bold' : 'text-gray-500'">
-              {{ progressList.length > 0 ? '✓' : '0/1' }}
-            </span>
-          </div>
-          <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-            <div class="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center text-lg shrink-0">🔥</div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-gray-700">Mantener racha activa</p>
-              <div class="h-1.5 bg-gray-200 rounded-full mt-1.5 overflow-hidden">
-                <div class="h-full bg-orange-400 rounded-full transition-all duration-500"
-                  [style.width.%]="streak > 0 ? 100 : 0"></div>
-              </div>
-            </div>
-            <span class="text-xs shrink-0"
-              [class]="streak > 0 ? 'text-green-600 font-bold' : 'text-gray-500'">
-              {{ streak > 0 ? '✓' : '0/1' }}
+            <span class="text-xs text-gray-500 shrink-0">
+              {{ getMissionProgress(m) }}/{{ m.targetValue }}
             </span>
           </div>
         </div>

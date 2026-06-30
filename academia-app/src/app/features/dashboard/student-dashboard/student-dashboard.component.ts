@@ -23,11 +23,13 @@ interface Challenge {
   end_date: string;
 }
 
-interface DashboardData {
-  streak: number;
-  totalXp: number;
-  progressList: ProgressSummary[];
-  activeChallenge: Challenge | null;
+interface DailyMission {
+  id: number;
+  title: string;
+  emoji: string;
+  missionType: string;
+  targetValue: number;
+  active: boolean;
 }
 
 @Component({
@@ -41,6 +43,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   totalXp = 0;
   progressList: ProgressSummary[] = [];
   activeChallenge: Challenge | null = null;
+  missions: DailyMission[] = [];
   loading = false;
   today = new Date();
 
@@ -75,14 +78,16 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
       streakRes: this.api.get<{ current: number }>('progress/streak').pipe(catchError(() => of(null))),
       progress: this.api.get<ProgressSummary[]>('progress').pipe(catchError(() => of([]))),
       challenges: this.api.get<Challenge[]>('gamification/challenges').pipe(catchError(() => of([]))),
+      missions: this.api.get<DailyMission[]>('missions').pipe(catchError(() => of([]))),
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ({ streakRes, progress, challenges }) => {
+        next: ({ streakRes, progress, challenges, missions }) => {
           this.streak = (streakRes as any)?.current ?? 0;
           this.progressList = (progress as ProgressSummary[]) ?? [];
           this.totalXp = this.progressList.reduce((sum, p) => sum + p.xp, 0);
           this.activeChallenge = (challenges as Challenge[])?.[0] ?? null;
+          this.missions = (missions as DailyMission[]) ?? [];
           this.cdr.detectChanges();
         },
         error: (err) => console.error('Error loading dashboard:', err),
@@ -116,10 +121,34 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   }
 
   get totalExercisesSolved(): number {
-    return this.progressList.reduce((sum, p) => sum + p.exercises_solved, 0);
+    return this.progressList.reduce((sum, p) => sum + (p.exercises_solved ?? 0), 0);
   }
 
   get currentLevel(): number {
     return Math.floor(this.totalXp / 100) + 1;
+  }
+
+  getMissionProgress(mission: DailyMission): number {
+    switch (mission.missionType) {
+      case 'exercises': return this.totalExercisesSolved;
+      case 'topics':    return this.progressList.length;
+      case 'streak':    return this.streak;
+      case 'xp':        return this.totalXp;
+      default:          return 0;
+    }
+  }
+
+  getMissionPercent(mission: DailyMission): number {
+    return Math.min((this.getMissionProgress(mission) / mission.targetValue) * 100, 100);
+  }
+
+  get activeMissions(): DailyMission[] {
+    return this.missions
+      .filter(m => this.getMissionProgress(m) < m.targetValue)
+      .slice(0, 5);
+  }
+
+  get completedMissionsCount(): number {
+    return this.missions.filter(m => this.getMissionProgress(m) >= m.targetValue).length;
   }
 }

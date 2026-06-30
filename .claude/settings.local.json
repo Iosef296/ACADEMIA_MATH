@@ -7,7 +7,11 @@
       "Bash(railway --version)",
       "Bash(xargs grep -l -i \"parametr\\\\|variable\\\\|generate\")",
       "Bash(xargs grep -l -i \"openrouter\\\\|qwen\\\\|vision\\\\|ocr\")",
-      "Bash(xargs grep -l -i \"cors\\\\|allowedOrigin\\\\|WebMvcConfigurer\")"
+      "Bash(xargs grep -l -i \"cors\\\\|allowedOrigin\\\\|WebMvcConfigurer\")",
+      "WebFetch(domain:openrouter.ai)",
+      "Bash(curl -s \"https://openrouter.ai/api/v1/models\")",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); free_vision=[m['id'] for m in data['data'] if ':free' in m['id'] and 'image' in m.get\\('architecture',{}\\).get\\('input_modalities',[]\\)]  ; print\\('\\\\n'.join\\(free_vision\\)\\)\")",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
