@@ -20,7 +20,7 @@ export class MissionManagementComponent implements OnInit {
   loading = false;
   error = '';
 
-  newMission = { title: '', emoji: '🎯', missionType: 'exercises', targetValue: 1 };
+  newMission = { title: '', emoji: '🎯', missionType: 'exercises', targetValue: 1, rewardXp: 10 };
   missionTypes = [
     { value: 'exercises', label: 'Ejercicios resueltos' },
     { value: 'topics',    label: 'Temas explorados' },
@@ -47,7 +47,7 @@ export class MissionManagementComponent implements OnInit {
     this.api.post<DailyMission>('missions', this.newMission).subscribe({
       next: (m) => {
         this.missions.push(m);
-        this.newMission = { title: '', emoji: '🎯', missionType: 'exercises', targetValue: 1 };
+        this.newMission = { title: '', emoji: '🎯', missionType: 'exercises', targetValue: 1, rewardXp: 10 };
         this.cdr.detectChanges();
       },
       error: () => { this.error = 'Error al crear misión'; this.cdr.detectChanges(); },

@@ -24,6 +24,9 @@ public class DailyMission {
     @Column(name = "target_value", nullable = false)
     private int targetValue;
 
+    @Column(name = "reward_xp", nullable = false)
+    private int rewardXp = 10;
+
     @Column(nullable = false)
     private boolean active = true;
 }
