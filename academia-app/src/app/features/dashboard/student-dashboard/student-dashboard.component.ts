@@ -51,7 +51,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   ];
   selectedMood: string | null = null;
   moodSaved = false;
-  showMoodModal = localStorage.getItem('moodAnsweredDate') !== new Date().toDateString();
+  showMoodModal = true;
   Math = Math;
 
   private destroy$ = new Subject<void>();
