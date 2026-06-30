@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import pe.edu.upeu.academia_api.util.MathLatexConverter;
@@ -69,8 +68,8 @@ public class OcrController {
         for (String model : MODELS) {
             try {
                 return callOpenRouter(base64Image, mimeType, model);
-            } catch (HttpClientErrorException e) {
-                System.err.println("[OCR] Model " + model + " failed (" + e.getStatusCode() + "), trying next...");
+            } catch (Exception e) {
+                System.err.println("[OCR] Model " + model + " failed: " + e.getMessage() + ", trying next...");
                 lastError = e;
             }
         }
@@ -106,8 +105,10 @@ public class OcrController {
 
         ObjectMapper om = new ObjectMapper();
         JsonNode root = om.readTree(resp.getBody());
-        return root.path("choices").get(0)
-                   .path("message").path("content")
-                   .asText("").trim();
+        JsonNode choices = root.path("choices");
+        if (choices.isEmpty() || choices.get(0) == null) {
+            throw new RuntimeException("No choices in response from " + model + ": " + resp.getBody());
+        }
+        return choices.get(0).path("message").path("content").asText("").trim();
     }
 }
