@@ -51,7 +51,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   ];
   selectedMood: string | null = null;
   moodSaved = false;
-  showMoodModal = true;
+  showMoodModal = !sessionStorage.getItem('moodAnswered');
   Math = Math;
 
   private destroy$ = new Subject<void>();
@@ -96,6 +96,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
     if (this.moodSaved) return;
     this.selectedMood = mood;
     this.showMoodModal = false;
+    sessionStorage.setItem('moodAnswered', '1');
     this.api.post('mood', { mood }).pipe(takeUntil(this.destroy$)).subscribe({ error: (err) => console.error('Error saving mood:', err) });
     const difficulty = this.moods.find(m => m.value === mood)?.difficulty ?? 'intermediate';
     this.router.navigate(['/exercises'], { queryParams: { difficulty } });
@@ -103,6 +104,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
 
   closeMoodModal(): void {
     this.showMoodModal = false;
+    sessionStorage.setItem('moodAnswered', '1');
   }
 
   get topTopics(): ProgressSummary[] {
