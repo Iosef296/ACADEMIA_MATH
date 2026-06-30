@@ -37,6 +37,7 @@ export class SidebarComponent implements OnInit {
     { label: 'PDF', route: '/pdf', icon: 'pdf', roles: ['teacher', 'admin'] },
     { label: 'Administrar', route: '/admin', icon: 'admin', roles: ['admin'] },
     { label: 'Misiones', route: '/admin/missions', icon: 'missions', roles: ['admin'] },
+    { label: 'Recompensas Nivel', route: '/admin/level-rewards', icon: 'rewards', roles: ['admin'] },
   ];
 
   constructor(private store: Store) {}

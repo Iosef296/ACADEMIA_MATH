@@ -33,6 +33,15 @@ interface DailyMission {
   active: boolean;
 }
 
+interface LevelReward {
+  id: number;
+  level: number;
+  title: string;
+  description: string;
+  emoji: string;
+  bonusXp: number;
+}
+
 @Component({
   selector: 'app-student-dashboard',
   templateUrl: './student-dashboard.component.html',
@@ -41,10 +50,14 @@ interface DailyMission {
 export class StudentDashboardComponent implements OnInit, OnDestroy {
   user$!: Observable<User | null>;
   streak = 0;
-  totalXp = 0;
+  topicXp = 0;
+  bonusXp = 0;
   progressList: ProgressSummary[] = [];
   activeChallenge: Challenge | null = null;
   missions: DailyMission[] = [];
+  claimedMissionIds: Set<number> = new Set();
+  levelRewards: LevelReward[] = [];
+  levelUpReward: LevelReward | null = null;
   loading = false;
   today = new Date();
 
@@ -59,6 +72,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   Math = Math;
 
   private destroy$ = new Subject<void>();
+  private prevLevel = 0;
 
   constructor(private store: Store, private api: ApiService, private cdr: ChangeDetectorRef, private router: Router) {}
 
@@ -76,23 +90,55 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
 
   loadDashboard(): void {
     forkJoin({
-      streakRes: this.api.get<{ current: number }>('progress/streak').pipe(catchError(() => of(null))),
-      progress: this.api.get<ProgressSummary[]>('progress').pipe(catchError(() => of([]))),
-      challenges: this.api.get<Challenge[]>('gamification/challenges').pipe(catchError(() => of([]))),
-      missions: this.api.get<DailyMission[]>('missions').pipe(catchError(() => of([]))),
+      streakRes:    this.api.get<{ current: number }>('progress/streak').pipe(catchError(() => of(null))),
+      progress:     this.api.get<ProgressSummary[]>('progress').pipe(catchError(() => of([]))),
+      challenges:   this.api.get<Challenge[]>('gamification/challenges').pipe(catchError(() => of([]))),
+      missions:     this.api.get<DailyMission[]>('missions').pipe(catchError(() => of([]))),
+      claimed:      this.api.get<number[]>('missions/claimed').pipe(catchError(() => of([]))),
+      bonusXpRes:   this.api.get<{ bonusXp: number }>('missions/bonus-xp').pipe(catchError(() => of({ bonusXp: 0 }))),
+      levelRewards: this.api.get<LevelReward[]>('level-rewards').pipe(catchError(() => of([]))),
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ({ streakRes, progress, challenges, missions }) => {
+        next: ({ streakRes, progress, challenges, missions, claimed, bonusXpRes, levelRewards }) => {
           this.streak = (streakRes as any)?.current ?? 0;
           this.progressList = (progress as ProgressSummary[]) ?? [];
-          this.totalXp = this.progressList.reduce((sum, p) => sum + p.xp, 0);
+          this.topicXp = this.progressList.reduce((sum, p) => sum + p.xp, 0);
+          this.bonusXp = (bonusXpRes as any)?.bonusXp ?? 0;
           this.activeChallenge = (challenges as Challenge[])?.[0] ?? null;
           this.missions = (missions as DailyMission[]) ?? [];
+          this.claimedMissionIds = new Set(claimed as number[]);
+          this.levelRewards = (levelRewards as LevelReward[]) ?? [];
           this.cdr.detectChanges();
         },
         error: (err) => console.error('Error loading dashboard:', err),
       });
+  }
+
+  get totalXp(): number {
+    return this.topicXp + this.bonusXp;
+  }
+
+  claimMission(mission: DailyMission): void {
+    this.api.post<{ bonusXp: number; earned: number }>(`missions/${mission.id}/claim`, {})
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const prevLevel = this.currentLevel;
+          this.claimedMissionIds = new Set([...this.claimedMissionIds, mission.id]);
+          this.bonusXp = res.bonusXp;
+          const newLevel = this.currentLevel;
+          if (newLevel > prevLevel) {
+            this.levelUpReward = this.levelRewards.find(r => r.level === newLevel) ?? null;
+          }
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  dismissLevelUp(): void {
+    this.levelUpReward = null;
+    this.cdr.detectChanges();
   }
 
   saveMood(mood: string): void {
@@ -143,13 +189,21 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
     return Math.min((this.getMissionProgress(mission) / mission.targetValue) * 100, 100);
   }
 
-  get activeMissions(): DailyMission[] {
+  isMissionClaimable(mission: DailyMission): boolean {
+    return this.getMissionProgress(mission) >= mission.targetValue && !this.claimedMissionIds.has(mission.id);
+  }
+
+  isMissionClaimed(mission: DailyMission): boolean {
+    return this.claimedMissionIds.has(mission.id);
+  }
+
+  get visibleMissions(): DailyMission[] {
     return this.missions
-      .filter(m => this.getMissionProgress(m) < m.targetValue)
-      .slice(0, 5);
+      .filter(m => !this.isMissionClaimed(m))
+      .slice(0, 6);
   }
 
   get completedMissionsCount(): number {
-    return this.missions.filter(m => this.getMissionProgress(m) >= m.targetValue).length;
+    return this.claimedMissionIds.size;
   }
 }

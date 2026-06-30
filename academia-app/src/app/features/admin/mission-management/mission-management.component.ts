@@ -22,6 +22,9 @@ export class MissionManagementComponent implements OnInit {
   error = '';
 
   newMission = { title: '', emoji: '🎯', missionType: 'exercises', targetValue: 1, rewardXp: 10 };
+  editingMission: DailyMission | null = null;
+  editCopy: Partial<DailyMission> = {};
+
   missionTypes = [
     { value: 'exercises', label: 'Ejercicios resueltos' },
     { value: 'topics',    label: 'Temas explorados' },
@@ -52,6 +55,30 @@ export class MissionManagementComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => { this.error = 'Error al crear misión'; this.cdr.detectChanges(); },
+    });
+  }
+
+  startEdit(mission: DailyMission): void {
+    this.editingMission = mission;
+    this.editCopy = { ...mission };
+  }
+
+  cancelEdit(): void {
+    this.editingMission = null;
+    this.editCopy = {};
+  }
+
+  saveEdit(): void {
+    if (!this.editingMission) return;
+    this.api.put<DailyMission>(`missions/${this.editingMission.id}`, this.editCopy).subscribe({
+      next: (updated) => {
+        const idx = this.missions.findIndex(m => m.id === updated.id);
+        if (idx !== -1) this.missions[idx] = updated;
+        this.editingMission = null;
+        this.editCopy = {};
+        this.cdr.detectChanges();
+      },
+      error: () => { this.error = 'Error al guardar cambios'; this.cdr.detectChanges(); },
     });
   }
 
