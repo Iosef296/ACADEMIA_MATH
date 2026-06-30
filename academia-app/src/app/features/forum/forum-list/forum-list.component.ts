@@ -5,15 +5,15 @@ import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 
 interface ForumPost {
-  id: number;
-  title: string;
-  body: string;
-  author: { id: number; name: string };
-  topic: { id: number; name: string } | null;
-  exercise: { id: number; title: string } | null;
-  reply_count: number;
-  created_at: string;
-  has_attachments: boolean;
+  id: string;
+  title: string | null;
+  content: string;
+  author: { id: string; name: string };
+  topicId: string | null;
+  exerciseId: string | null;
+  parentId: string | null;
+  replies: ForumPost[];
+  createdAt: string;
 }
 
 @Component({
@@ -25,7 +25,7 @@ export class ForumListComponent implements OnInit, OnDestroy {
   posts: ForumPost[] = [];
   loading = false;
   searchQuery = '';
-  topicFilter: number | null = null;
+  topicFilter: string | null = null;
 
   showNewPost = false;
   newTitle = '';
@@ -47,7 +47,7 @@ export class ForumListComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (params) => {
-          this.topicFilter = params['topicId'] ? Number(params['topicId']) : null;
+          this.topicFilter = params['topicId'] ? String(params['topicId']) : null;
           this.load();
         },
         error: (err) => console.error('Error reading query params:', err),
@@ -60,12 +60,13 @@ export class ForumListComponent implements OnInit, OnDestroy {
   }
 
   load(): void {
+    this.loading = true;
     const query = this.topicFilter ? `?topicId=${this.topicFilter}` : '';
     this.api.get<ForumPost[]>(`forum${query}`)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
-          this.posts = data;
+          this.posts = data ?? [];
           this.loading = false;
           this.cdr.detectChanges();
         },
@@ -82,10 +83,14 @@ export class ForumListComponent implements OnInit, OnDestroy {
     if (!q) return this.posts;
     return this.posts.filter(
       (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.author.name.toLowerCase().includes(q) ||
-        p.topic?.name.toLowerCase().includes(q)
+        (p.title ?? '').toLowerCase().includes(q) ||
+        p.content.toLowerCase().includes(q) ||
+        p.author.name.toLowerCase().includes(q)
     );
+  }
+
+  replyCount(p: ForumPost): number {
+    return p.replies?.length ?? 0;
   }
 
   createPost(): void {
@@ -96,9 +101,9 @@ export class ForumListComponent implements OnInit, OnDestroy {
     this.error = '';
     this.saving = true;
     this.api
-      .post<any>('forum', {
-        title: this.newTitle,
-        body: this.newBody,
+      .post<ForumPost>('forum', {
+        title: this.newTitle.trim(),
+        content: this.newBody.trim(),
         topicId: this.topicFilter,
       })
       .pipe(takeUntil(this.destroy$))
@@ -110,14 +115,16 @@ export class ForumListComponent implements OnInit, OnDestroy {
           this.newBody = '';
           this.router.navigate(['/forum', res.id]);
         },
-        error: () => {
+        error: (err) => {
           this.saving = false;
           this.error = 'Error al publicar. Intenta de nuevo.';
+          console.error('Error creating post:', err);
         },
       });
   }
 
   timeAgo(dateStr: string): string {
+    if (!dateStr) return '';
     const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
     if (diff < 60) return 'hace un momento';
     if (diff < 3600) return `hace ${Math.floor(diff / 60)} min`;
@@ -125,3 +132,5 @@ export class ForumListComponent implements OnInit, OnDestroy {
     return `hace ${Math.floor(diff / 86400)}d`;
   }
 }
+</content>
+</invoke>
