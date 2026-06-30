@@ -23,7 +23,7 @@ export class ExerciseListComponent implements OnInit, OnDestroy {
   loading = false;
   error = '';
   searchQuery = '';
-  filterDifficulty = '';
+  filterDifficulty = localStorage.getItem('exerciseDifficulty') ?? '';
 
   difficultyLabel: Record<string, string> = {
     basic: 'Básico',
@@ -47,7 +47,10 @@ export class ExerciseListComponent implements OnInit, OnDestroy {
       distinctUntilChanged((a, b) => a['topicId'] === b['topicId'] && a['difficulty'] === b['difficulty']),
       tap(() => { this.loading = true; this.error = ''; }),
       switchMap((params) => {
-        if (params['difficulty']) this.filterDifficulty = params['difficulty'];
+        if (params['difficulty']) {
+          this.filterDifficulty = params['difficulty'];
+          localStorage.setItem('exerciseDifficulty', this.filterDifficulty);
+        }
         const p = params['topicId'] ? { topicId: params['topicId'] } : undefined;
         return this.api.get<Exercise[]>('exercises', p).pipe(
           timeout(15000),
@@ -69,6 +72,11 @@ export class ExerciseListComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  saveFilter(value: string): void {
+    if (value) localStorage.setItem('exerciseDifficulty', value);
+    else localStorage.removeItem('exerciseDifficulty');
   }
 
   get filtered(): Exercise[] {
