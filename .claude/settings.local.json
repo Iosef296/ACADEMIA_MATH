@@ -5,7 +5,8 @@
       "PowerShell(New-Item *)",
       "PowerShell($url = \"https://tessdata.projectnaptha.com/4.0.0/eng.traineddata.gz\"; $dest = \"F:\\\\SISTEMAS\\\\xd\\\\ACADEMIA\\\\academia-app\\\\src\\\\assets\\\\tessdata\\\\eng.traineddata.gz\"; Write-Host \"Downloading eng.traineddata.gz \\(~1.8MB\\)...\"; Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing; $size = \\(Get-Item $dest\\).Length / 1KB; Write-Host \"Done: $\\([math]::Round\\($size\\)\\) KB\")",
       "Bash(railway --version)",
-      "Bash(xargs grep -l -i \"parametr\\\\|variable\\\\|generate\")"
+      "Bash(xargs grep -l -i \"parametr\\\\|variable\\\\|generate\")",
+      "Bash(xargs grep -l -i \"openrouter\\\\|qwen\\\\|vision\\\\|ocr\")"
     ]
   }
 }

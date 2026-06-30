@@ -22,8 +22,7 @@ public class OcrController {
     private String openRouterKey;
 
     private static final String OR_URL   = "https://openrouter.ai/api/v1/chat/completions";
-    // Qwen2-VL: best free model for handwritten math and technical documents
-    private static final String MODEL    = "qwen/qwen2-vl-7b-instruct:free";
+    private static final String MODEL    = "meta-llama/llama-3.2-11b-vision-instruct:free";
 
     private static final String PROMPT =
         "Eres un experto en matemáticas. Esta imagen contiene ejercicios o apuntes " +
