@@ -462,6 +462,210 @@
     </div>
   </div>
 
+
+  <!-- ── Teacher: Variable Manager ──────────────────────── -->
+  <div *ngIf="isTeacher && exercise?.isParametric" class="mt-6">
+
+    <button (click)="showVariableManager = !showVariableManager"
+      class="flex items-center gap-2 text-sm font-semibold text-purple-600 hover:text-purple-800 transition mb-4">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      {{ showVariableManager ? 'Ocultar variables' : 'Gestionar variables paramétricas (Docente)' }}
+    </button>
+
+    <div *ngIf="showVariableManager" class="bg-purple-50 border border-purple-200 rounded-xl p-6 space-y-5">
+
+      <p class="text-xs text-purple-700">
+        Usa <code class="bg-purple-100 px-1 rounded">${'{'}varName{'}'}</code> en el enunciado para insertar valores generados. Ej: <code class="bg-purple-100 px-1 rounded">Resuelve $x^2 + ${'{'}a{'}'}x + ${'{'}b{'}'} = 0$</code>
+      </p>
+
+      <!-- Alerts -->
+      <div *ngIf="varError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{{ varError }}</div>
+      <div *ngIf="varSuccess" class="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">✓ {{ varSuccess }}</div>
+
+      <!-- Existing variables -->
+      <div *ngIf="exerciseVariables.length > 0" class="space-y-3">
+        <h3 class="text-sm font-semibold text-purple-900">Variables definidas</h3>
+
+        <div *ngFor="let v of exerciseVariables"
+          class="bg-white border border-purple-100 rounded-lg p-4 shadow-sm">
+
+          <!-- View mode -->
+          <div *ngIf="editingVarId !== v.id">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0 space-y-1">
+                <p class="text-sm font-bold text-purple-800 font-mono">${'{'}{{ v.varName }}{'}'}</p>
+                <div class="flex flex-wrap gap-3 text-xs text-gray-600">
+                  <span>Rango: <strong>{{ v.minVal ?? '?' }} – {{ v.maxVal ?? '?' }}</strong></span>
+                  <span *ngIf="v.stepVal">Paso: <strong>{{ v.stepVal }}</strong></span>
+                  <span *ngIf="v.integerOnly" class="text-blue-600 font-medium">Solo enteros</span>
+                  <span *ngIf="v.constraintType" class="text-orange-600 font-medium">
+                    {{ v.constraintType }}<span *ngIf="v.constraintValue">: {{ v.constraintValue }}</span>
+                  </span>
+                </div>
+              </div>
+              <div class="flex gap-1 shrink-0">
+                <button (click)="startEditVar(v)"
+                  class="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+                <button (click)="deleteVar(v)"
+                  class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Edit mode -->
+          <div *ngIf="editingVarId === v.id" class="space-y-3">
+            <p class="text-xs font-semibold text-purple-700">Editando variable</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Nombre de variable</label>
+                <input [(ngModel)]="editVarForm.varName" type="text" placeholder="Ej: a, b, n"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono
+                    focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Solo enteros</label>
+                <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                  <input type="checkbox" [(ngModel)]="editVarForm.integerOnly" class="rounded"/>
+                  <span class="text-sm text-gray-700">Activado</span>
+                </label>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Mínimo</label>
+                <input [(ngModel)]="editVarForm.minVal" type="number"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                    focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Máximo</label>
+                <input [(ngModel)]="editVarForm.maxVal" type="number"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                    focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Paso (opcional)</label>
+                <input [(ngModel)]="editVarForm.stepVal" type="number"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                    focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Restricción</label>
+                <select [(ngModel)]="editVarForm.constraintType"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                    focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  <option *ngFor="let opt of constraintOptions" [value]="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+              <div *ngIf="editNeedsConstraintValue">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Valor restricción</label>
+                <input [(ngModel)]="editVarForm.constraintValue" type="number"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                    focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+              </div>
+            </div>
+            <div class="flex gap-2 justify-end">
+              <button (click)="cancelEditVar()"
+                class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition">
+                Cancelar
+              </button>
+              <button (click)="saveEditVar(v)" [disabled]="varSaving"
+                class="px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition disabled:opacity-50">
+                {{ varSaving ? 'Guardando...' : 'Guardar' }}
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Add new variable -->
+      <div class="bg-white border border-dashed border-purple-300 rounded-lg p-4 space-y-3">
+        <h3 class="text-sm font-semibold text-purple-900">Agregar variable</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Nombre de variable *</label>
+            <input [(ngModel)]="newVarForm.varName" type="text" placeholder="Ej: a, b, n"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono
+                focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Solo enteros</label>
+            <label class="flex items-center gap-2 mt-2 cursor-pointer">
+              <input type="checkbox" [(ngModel)]="newVarForm.integerOnly" class="rounded"/>
+              <span class="text-sm text-gray-700">Activado</span>
+            </label>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Mínimo</label>
+            <input [(ngModel)]="newVarForm.minVal" type="number"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Máximo</label>
+            <input [(ngModel)]="newVarForm.maxVal" type="number"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Paso (opcional)</label>
+            <input [(ngModel)]="newVarForm.stepVal" type="number"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Restricción</label>
+            <select [(ngModel)]="newVarForm.constraintType"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <option *ngFor="let opt of constraintOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div *ngIf="needsConstraintValue">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Valor restricción</label>
+            <input [(ngModel)]="newVarForm.constraintValue" type="number"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+          </div>
+        </div>
+        <button (click)="addVariable()" [disabled]="varSaving || !newVarForm.varName.trim()"
+          class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300
+            text-white text-sm font-semibold rounded-lg transition flex items-center justify-center gap-2">
+          <svg *ngIf="varSaving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <svg *ngIf="!varSaving" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          {{ varSaving ? 'Agregando...' : 'Agregar variable' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <!-- Not found -->

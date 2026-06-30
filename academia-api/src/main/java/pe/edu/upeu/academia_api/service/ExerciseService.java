@@ -3,6 +3,7 @@ package pe.edu.upeu.academia_api.service;
 import pe.edu.upeu.academia_api.dto.exercise.ExerciseRequest;
 import pe.edu.upeu.academia_api.dto.exercise.ExerciseResponse;
 import pe.edu.upeu.academia_api.dto.exercise.ExerciseStepRequest;
+import pe.edu.upeu.academia_api.dto.exercise.ExerciseVariableRequest;
 import pe.edu.upeu.academia_api.dto.exercise.RateRequest;
 
 import java.util.List;
@@ -25,4 +26,8 @@ public interface ExerciseService {
     void reorderSteps(UUID id, List<UUID> stepIds);
     ExerciseResponse.StepRef updateStep(UUID exerciseId, UUID stepId, ExerciseStepRequest request);
     void deleteStep(UUID exerciseId, UUID stepId);
+    List<ExerciseResponse.VariableRef> getVariables(UUID exerciseId);
+    ExerciseResponse.VariableRef addVariable(UUID exerciseId, ExerciseVariableRequest request);
+    ExerciseResponse.VariableRef updateVariable(UUID exerciseId, UUID varId, ExerciseVariableRequest request);
+    void deleteVariable(UUID exerciseId, UUID varId);
 }

@@ -109,4 +109,32 @@ public class ExerciseController {
         exerciseService.deleteStep(id, stepId);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{id}/variables")
+    @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
+    public ResponseEntity<List<ExerciseResponse.VariableRef>> getVariables(@PathVariable UUID id) {
+        return ResponseEntity.ok(exerciseService.getVariables(id));
+    }
+
+    @PostMapping("/{id}/variables")
+    @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
+    public ResponseEntity<ExerciseResponse.VariableRef> addVariable(
+            @PathVariable UUID id, @Valid @RequestBody ExerciseVariableRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(exerciseService.addVariable(id, request));
+    }
+
+    @PutMapping("/{id}/variables/{varId}")
+    @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
+    public ResponseEntity<ExerciseResponse.VariableRef> updateVariable(
+            @PathVariable UUID id, @PathVariable UUID varId,
+            @Valid @RequestBody ExerciseVariableRequest request) {
+        return ResponseEntity.ok(exerciseService.updateVariable(id, varId, request));
+    }
+
+    @DeleteMapping("/{id}/variables/{varId}")
+    @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
+    public ResponseEntity<Void> deleteVariable(@PathVariable UUID id, @PathVariable UUID varId) {
+        exerciseService.deleteVariable(id, varId);
+        return ResponseEntity.noContent().build();
+    }
 }

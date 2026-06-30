@@ -29,6 +29,7 @@ public class ExerciseServiceImpl implements ExerciseService {
     private final ProgressService progressService;
     private final ExerciseAttemptRepository attemptRepository;
     private final StudentProfileRepository profileRepository;
+    private final ExerciseVariableRepository variableRepository;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -378,11 +379,7 @@ public class ExerciseServiceImpl implements ExerciseService {
                         .name(e.getTopic().getName())
                         .build())
                 .steps(e.getSteps().stream().map(this::toStepRef).toList())
-                .variables(e.getVariables().stream().map(v ->
-                        ExerciseResponse.VariableRef.builder()
-                                .id(v.getId()).varName(v.getVarName())
-                                .minVal(v.getMinVal()).maxVal(v.getMaxVal()).stepVal(v.getStepVal())
-                                .build()).toList())
+                .variables(e.getVariables().stream().map(this::toVariableRef).toList())
                 .createdAt(e.getCreatedAt())
                 .build();
     }
@@ -393,5 +390,59 @@ public class ExerciseServiceImpl implements ExerciseService {
                 .contentLatex(s.getContentLatex())
                 .hint(s.getHint()).warning(s.getWarning())
                 .build();
+    }
+
+    private ExerciseResponse.VariableRef toVariableRef(ExerciseVariable v) {
+        return ExerciseResponse.VariableRef.builder()
+                .id(v.getId()).varName(v.getVarName())
+                .minVal(v.getMinVal()).maxVal(v.getMaxVal()).stepVal(v.getStepVal())
+                .constraintType(v.getConstraintType()).constraintValue(v.getConstraintValue())
+                .integerOnly(v.getIntegerOnly())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ExerciseResponse.VariableRef> getVariables(UUID exerciseId) {
+        return variableRepository.findByExerciseId(exerciseId).stream()
+                .map(this::toVariableRef).toList();
+    }
+
+    @Override
+    @Transactional
+    public ExerciseResponse.VariableRef addVariable(UUID exerciseId, ExerciseVariableRequest request) {
+        Exercise exercise = find(exerciseId);
+        ExerciseVariable variable = ExerciseVariable.builder()
+                .exercise(exercise)
+                .varName(request.getVarName())
+                .minVal(request.getMinVal())
+                .maxVal(request.getMaxVal())
+                .stepVal(request.getStepVal())
+                .constraintType(request.getConstraintType())
+                .constraintValue(request.getConstraintValue())
+                .integerOnly(Boolean.TRUE.equals(request.getIntegerOnly()))
+                .build();
+        return toVariableRef(variableRepository.save(variable));
+    }
+
+    @Override
+    @Transactional
+    public ExerciseResponse.VariableRef updateVariable(UUID exerciseId, UUID varId, ExerciseVariableRequest request) {
+        ExerciseVariable variable = variableRepository.findById(varId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Variable no encontrada"));
+        variable.setVarName(request.getVarName());
+        variable.setMinVal(request.getMinVal());
+        variable.setMaxVal(request.getMaxVal());
+        variable.setStepVal(request.getStepVal());
+        variable.setConstraintType(request.getConstraintType());
+        variable.setConstraintValue(request.getConstraintValue());
+        variable.setIntegerOnly(Boolean.TRUE.equals(request.getIntegerOnly()));
+        return toVariableRef(variableRepository.save(variable));
+    }
+
+    @Override
+    @Transactional
+    public void deleteVariable(UUID exerciseId, UUID varId) {
+        variableRepository.deleteById(varId);
     }
 }

@@ -45,5 +45,8 @@ public class ExerciseResponse {
         private Double minVal;
         private Double maxVal;
         private Double stepVal;
+        private String constraintType;
+        private String constraintValue;
+        private Boolean integerOnly;
     }
 }

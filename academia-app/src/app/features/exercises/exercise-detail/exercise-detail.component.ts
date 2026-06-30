@@ -35,6 +35,27 @@ interface VariableValues {
   [key: string]: number;
 }
 
+interface ExerciseVariable {
+  id: string;
+  varName: string;
+  minVal: number | null;
+  maxVal: number | null;
+  stepVal: number | null;
+  constraintType: string | null;
+  constraintValue: string | null;
+  integerOnly: boolean;
+}
+
+interface VariableForm {
+  varName: string;
+  minVal: number | null;
+  maxVal: number | null;
+  stepVal: number | null;
+  constraintType: string;
+  constraintValue: string;
+  integerOnly: boolean;
+}
+
 // For teacher step management
 interface StepForm {
   contentLatex: string;
@@ -81,6 +102,26 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
   newStepForm: StepForm = { contentLatex: '', hint: '', warning: '' };
   editStepForm: StepForm = { contentLatex: '', hint: '', warning: '' };
 
+  // Teacher variable management
+  exerciseVariables: ExerciseVariable[] = [];
+  showVariableManager = false;
+  varSaving = false;
+  varError = '';
+  varSuccess = '';
+  editingVarId: string | null = null;
+  newVarForm: VariableForm = { varName: '', minVal: null, maxVal: null, stepVal: null, constraintType: '', constraintValue: '', integerOnly: false };
+  editVarForm: VariableForm = { varName: '', minVal: null, maxVal: null, stepVal: null, constraintType: '', constraintValue: '', integerOnly: false };
+
+  readonly constraintOptions = [
+    { value: '', label: 'Ninguna' },
+    { value: 'prime', label: 'Primo' },
+    { value: 'even', label: 'Par' },
+    { value: 'odd', label: 'Impar' },
+    { value: 'positive', label: 'Positivo' },
+    { value: 'divisible', label: 'Divisible por...' },
+    { value: 'not_divisible', label: 'No divisible por...' },
+  ];
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -106,6 +147,12 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
 
   get isTeacher(): boolean {
     return this.userRole === 'teacher' || this.userRole === 'admin';
+  }
+
+  loadVariables(): void {
+    this.api.get<ExerciseVariable[]>(`exercises/${this.exerciseId}/variables`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({ next: (vars) => { this.exerciseVariables = vars ?? []; this.cdr.detectChanges(); } });
   }
 
   load(): void {
@@ -153,6 +200,7 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
 
       this.loading = false;
       this.cdr.detectChanges();
+      if (this.isTeacher) this.loadVariables();
     }).catch(() => {
       this.loading = false;
       this.cdr.detectChanges();
@@ -305,6 +353,99 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
         error: () => {
           this.stepError = 'Error al eliminar paso.';
         },
+      });
+  }
+
+  // ── Teacher: variable management ────────────────────
+
+  get needsConstraintValue(): boolean {
+    return this.newVarForm.constraintType === 'divisible' || this.newVarForm.constraintType === 'not_divisible';
+  }
+
+  get editNeedsConstraintValue(): boolean {
+    return this.editVarForm.constraintType === 'divisible' || this.editVarForm.constraintType === 'not_divisible';
+  }
+
+  addVariable(): void {
+    if (!this.newVarForm.varName.trim()) {
+      this.varError = 'El nombre de variable es obligatorio.';
+      return;
+    }
+    this.varSaving = true;
+    this.varError = '';
+    this.api.post(`exercises/${this.exerciseId}/variables`, {
+      varName: this.newVarForm.varName.trim(),
+      minVal: this.newVarForm.minVal,
+      maxVal: this.newVarForm.maxVal,
+      stepVal: this.newVarForm.stepVal,
+      constraintType: this.newVarForm.constraintType || null,
+      constraintValue: this.newVarForm.constraintValue || null,
+      integerOnly: this.newVarForm.integerOnly,
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.varSaving = false;
+          this.varSuccess = 'Variable agregada.';
+          this.newVarForm = { varName: '', minVal: null, maxVal: null, stepVal: null, constraintType: '', constraintValue: '', integerOnly: false };
+          setTimeout(() => (this.varSuccess = ''), 2500);
+          this.loadVariables();
+        },
+        error: () => { this.varSaving = false; this.varError = 'Error al agregar variable.'; },
+      });
+  }
+
+  startEditVar(v: ExerciseVariable): void {
+    this.editingVarId = v.id;
+    this.editVarForm = {
+      varName: v.varName,
+      minVal: v.minVal,
+      maxVal: v.maxVal,
+      stepVal: v.stepVal,
+      constraintType: v.constraintType ?? '',
+      constraintValue: v.constraintValue ?? '',
+      integerOnly: v.integerOnly,
+    };
+  }
+
+  cancelEditVar(): void {
+    this.editingVarId = null;
+  }
+
+  saveEditVar(v: ExerciseVariable): void {
+    if (!this.editVarForm.varName.trim()) return;
+    this.varSaving = true;
+    this.api.put(`exercises/${this.exerciseId}/variables/${v.id}`, {
+      varName: this.editVarForm.varName.trim(),
+      minVal: this.editVarForm.minVal,
+      maxVal: this.editVarForm.maxVal,
+      stepVal: this.editVarForm.stepVal,
+      constraintType: this.editVarForm.constraintType || null,
+      constraintValue: this.editVarForm.constraintValue || null,
+      integerOnly: this.editVarForm.integerOnly,
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.varSaving = false;
+          this.editingVarId = null;
+          this.varSuccess = 'Variable actualizada.';
+          setTimeout(() => (this.varSuccess = ''), 2500);
+          this.loadVariables();
+        },
+        error: () => { this.varSaving = false; this.varError = 'Error al actualizar variable.'; },
+      });
+  }
+
+  deleteVar(v: ExerciseVariable): void {
+    if (!confirm(`¿Eliminar variable "${v.varName}"?`)) return;
+    this.api.delete(`exercises/${this.exerciseId}/variables/${v.id}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.varSuccess = 'Variable eliminada.';
+          setTimeout(() => (this.varSuccess = ''), 2500);
+          this.loadVariables();
+        },
+        error: () => { this.varError = 'Error al eliminar variable.'; },
       });
   }
 }
