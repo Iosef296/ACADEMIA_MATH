@@ -20,6 +20,7 @@ public class ForumPostResponse {
     private UUID parentId;
     private List<ForumPostResponse> replies;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class AuthorRef {

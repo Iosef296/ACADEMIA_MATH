@@ -66,6 +66,18 @@ public class ForumServiceImpl implements ForumService {
 
     @Override
     @Transactional
+    public ForumPostResponse update(UUID id, ForumPostRequest request, UUID userId) {
+        ForumPost post = find(id);
+        if (post.getUser() == null || !post.getUser().getId().equals(userId)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Solo el autor puede editar este post");
+        }
+        post.setTitle(request.getTitle());
+        post.setContent(request.getContent());
+        return toResponse(forumPostRepository.save(post));
+    }
+
+    @Override
+    @Transactional
     public void delete(UUID id) {
         forumPostRepository.deleteById(id);
     }
@@ -91,6 +103,7 @@ public class ForumServiceImpl implements ForumService {
                         ? p.getReplies().stream().map(this::toResponse).toList()
                         : List.of())
                 .createdAt(p.getCreatedAt())
+                .updatedAt(p.getUpdatedAt())
                 .build();
     }
 }

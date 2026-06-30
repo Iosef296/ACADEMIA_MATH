@@ -39,6 +39,15 @@ public class ForumController {
                 .body(forumService.create(request, UUID.fromString(auth.getName())));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ForumPostResponse> update(
+            @PathVariable UUID id,
+            @Valid @RequestBody ForumPostRequest request,
+            Authentication auth) {
+        return ResponseEntity.ok(
+                forumService.update(id, request, UUID.fromString(auth.getName())));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         forumService.delete(id);

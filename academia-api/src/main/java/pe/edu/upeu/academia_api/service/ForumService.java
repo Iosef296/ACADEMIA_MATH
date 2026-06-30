@@ -10,5 +10,6 @@ public interface ForumService {
     List<ForumPostResponse> findAll(String topicId, String exerciseId);
     ForumPostResponse findById(UUID id);
     ForumPostResponse create(ForumPostRequest request, UUID userId);
+    ForumPostResponse update(UUID id, ForumPostRequest request, UUID userId);
     void delete(UUID id);
 }
