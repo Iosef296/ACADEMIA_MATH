@@ -1,5 +1,6 @@
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
+ENV GRADLE_USER_HOME=/tmp/gradle
 COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
 RUN chmod +x gradlew && ./gradlew --version
