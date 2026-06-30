@@ -132,5 +132,3 @@ export class ForumListComponent implements OnInit, OnDestroy {
     return `hace ${Math.floor(diff / 86400)}d`;
   }
 }
-</content>
-</invoke>

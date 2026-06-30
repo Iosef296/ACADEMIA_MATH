@@ -96,5 +96,3 @@ export class ForumPostComponent implements OnInit, OnDestroy {
     return `hace ${Math.floor(diff / 86400)}d`;
   }
 }
-</content>
-</invoke>
