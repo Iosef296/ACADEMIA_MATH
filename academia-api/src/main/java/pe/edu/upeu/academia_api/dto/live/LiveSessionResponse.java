@@ -13,6 +13,7 @@ public class LiveSessionResponse {
     private UUID id;
     private String title;
     private String jitsiRoomId;
+    private UUID teacherId;
     private String teacherName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;

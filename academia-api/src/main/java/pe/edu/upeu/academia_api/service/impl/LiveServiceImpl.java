@@ -12,6 +12,7 @@ import pe.edu.upeu.academia_api.repository.LiveSessionRepository;
 import pe.edu.upeu.academia_api.repository.UserRepository;
 import pe.edu.upeu.academia_api.service.LiveService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,7 +26,7 @@ public class LiveServiceImpl implements LiveService {
     @Override
     @Transactional(readOnly = true)
     public List<LiveSessionResponse> findAll() {
-        return liveSessionRepository.findAll().stream().map(this::toResponse).toList();
+        return liveSessionRepository.findAllByOrderByStatusAscStartTimeDesc().stream().map(this::toResponse).toList();
     }
 
     @Override
@@ -39,9 +40,9 @@ public class LiveServiceImpl implements LiveService {
     public LiveSessionResponse create(LiveSessionRequest request, UUID teacherId) {
         LiveSession session = LiveSession.builder()
                 .title(request.getTitle())
-                .jitsiRoomId(UUID.randomUUID().toString().replace("-", "").substring(0, 12))
-                .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
+                .jitsiRoomId("academia-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12))
+                .startTime(request.getStartTime() != null ? request.getStartTime() : LocalDateTime.now())
+                .status("ACTIVE")
                 .teacher(userRepository.findById(teacherId)
                         .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuario no encontrado")))
                 .build();
@@ -53,6 +54,9 @@ public class LiveServiceImpl implements LiveService {
     public LiveSessionResponse updateStatus(UUID id, String status) {
         LiveSession session = find(id);
         session.setStatus(status);
+        if ("ENDED".equalsIgnoreCase(status)) {
+            session.setEndTime(LocalDateTime.now());
+        }
         return toResponse(liveSessionRepository.save(session));
     }
 
@@ -71,6 +75,7 @@ public class LiveServiceImpl implements LiveService {
         return LiveSessionResponse.builder()
                 .id(s.getId()).title(s.getTitle())
                 .jitsiRoomId(s.getJitsiRoomId())
+                .teacherId(s.getTeacher() != null ? s.getTeacher().getId() : null)
                 .teacherName(s.getTeacher() != null ? s.getTeacher().getName() : null)
                 .startTime(s.getStartTime()).endTime(s.getEndTime())
                 .status(s.getStatus()).createdAt(s.getCreatedAt())

@@ -7,17 +7,13 @@ import {
   ViewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Store } from '@ngrx/store';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
-
-interface LiveSession {
-  id: number;
-  title: string;
-  topic: { id: number; name: string } | null;
-  host: { id: number; name: string };
-  jitsi_room: string;
-  started_at: string;
-  ended_at: string | null;
-}
+import { selectCurrentUser } from '../../../store/auth/auth.selectors';
+import { User } from '../../../store/auth/auth.state';
+import { LiveSession } from '../live-list/live-list.component';
 
 declare const JitsiMeetExternalAPI: any;
 
@@ -29,48 +25,66 @@ declare const JitsiMeetExternalAPI: any;
 export class LiveRoomComponent implements OnInit, OnDestroy {
   @ViewChild('jitsiContainer', { static: false }) jitsiContainer!: ElementRef;
 
-  sessionId!: number;
+  sessionId!: string;
   session: LiveSession | null = null;
-  loading = false;
+  loading = true;
   error = '';
+  user: User | null = null;
 
   private jitsiApi: any = null;
   jitsiReady = false;
+
+  private destroy$ = new Subject<void>();
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private api: ApiService,
+    private store: Store,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
-    this.sessionId = Number(this.route.snapshot.paramMap.get('id'));
+    this.sessionId = this.route.snapshot.paramMap.get('id') ?? '';
+
+    this.store.select(selectCurrentUser)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(u => this.user = u);
+
     this.loadSession();
   }
 
   ngOnDestroy(): void {
     this.disposeJitsi();
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  get isOwner(): boolean {
+    return !!this.user && !!this.session && this.user.id === this.session.teacherId;
   }
 
   private loadSession(): void {
-    this.api.get<LiveSession>(`live/sessions/${this.sessionId}`).subscribe({
-      next: (session) => {
-        this.session = session;
-        this.loading = false;
-        this.cdr.detectChanges();
-        if (session.ended_at) {
-          this.error = 'Esta sesión ya ha finalizado.';
-          return;
-        }
-        setTimeout(() => this.initJitsi(), 100);
-      },
-      error: () => {
-        this.error = 'No se pudo cargar la sesión.';
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-    });
+    this.loading = true;
+    this.api.get<LiveSession>(`live/${this.sessionId}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (session) => {
+          this.session = session;
+          this.loading = false;
+          this.cdr.detectChanges();
+          if (session.status === 'ENDED') {
+            this.error = 'Esta sesión ya ha finalizado.';
+            return;
+          }
+          setTimeout(() => this.initJitsi(), 100);
+        },
+        error: () => {
+          this.error = 'No se pudo cargar la sesión.';
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   private initJitsi(): void {
@@ -101,14 +115,18 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
   private mountJitsi(): void {
     const domain = 'meet.jit.si';
     const options = {
-      roomName: this.session!.jitsi_room,
+      roomName: this.session!.jitsiRoomId,
       parentNode: this.jitsiContainer.nativeElement,
       width: '100%',
       height: '100%',
+      userInfo: {
+        displayName: this.user?.name || 'Participante',
+      },
       configOverwrite: {
         startWithAudioMuted: true,
         startWithVideoMuted: false,
         disableDeepLinking: true,
+        prejoinPageEnabled: false,
       },
       interfaceConfigOverwrite: {
         TOOLBAR_BUTTONS: [
@@ -123,6 +141,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
 
     this.jitsiApi = new JitsiMeetExternalAPI(domain, options);
     this.jitsiReady = true;
+    this.cdr.detectChanges();
 
     this.jitsiApi.addEventListener('readyToClose', () => {
       this.leave();
@@ -134,6 +153,19 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
       this.jitsiApi.dispose();
       this.jitsiApi = null;
     }
+  }
+
+  endSession(): void {
+    if (!this.session || !confirm('¿Deseas finalizar esta sesión para todos?')) return;
+
+    this.api.patch<LiveSession>(`live/${this.session.id}/status`, { status: 'ENDED' })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.disposeJitsi();
+          this.router.navigate(['/live']);
+        },
+      });
   }
 
   leave(): void {

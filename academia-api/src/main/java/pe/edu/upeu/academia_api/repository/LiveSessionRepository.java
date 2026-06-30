@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface LiveSessionRepository extends JpaRepository<LiveSession, UUID> {
     List<LiveSession> findByStatusOrderByStartTimeAsc(String status);
     List<LiveSession> findByTeacherIdOrderByStartTimeDesc(UUID teacherId);
+    List<LiveSession> findAllByOrderByStatusAscStartTimeDesc();
 }
