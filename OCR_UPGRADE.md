@@ -10,8 +10,11 @@ que devolvió LaTeX limpio y correcto. La versión paga quita el rate limit.
 ### 1. Cargar créditos en OpenRouter
 - openrouter.ai/settings/credits → Add Credits (~$5 alcanza para meses)
 
-### 2. El código ya está configurado
-El modelo pago ya está como primario en `OcrController.java`:
+### 2. Cambiar el orden de modelos en `OcrController.java`
+
+Archivo: `academia-api/src/main/java/pe/edu/upeu/academia_api/controller/OcrController.java`
+
+Reemplazar la lista `MODELS` con:
 
 ```java
 private static final List<String> MODELS = List.of(
@@ -21,8 +24,6 @@ private static final List<String> MODELS = List.of(
     "google/gemma-4-31b-it:free"
 );
 ```
-
-No hay cambio de código necesario — solo cargar los créditos en OpenRouter.
 
 ### 3. Costo estimado
 
