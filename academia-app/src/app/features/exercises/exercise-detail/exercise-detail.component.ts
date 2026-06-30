@@ -112,6 +112,11 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
   newVarForm: VariableForm = { varName: '', minVal: null, maxVal: null, stepVal: null, constraintType: '', constraintValue: '', integerOnly: false };
   editVarForm: VariableForm = { varName: '', minVal: null, maxVal: null, stepVal: null, constraintType: '', constraintValue: '', integerOnly: false };
 
+  readonly varSyntaxHint = '${varName}';
+  readonly varSyntaxExample = 'Resuelve $x^2 + ${a}x + ${b} = 0$';
+
+  varDisplay(name: string): string { return `\${${name}}`; }
+
   readonly constraintOptions = [
     { value: '', label: 'Ninguna' },
     { value: 'prime', label: 'Primo' },
