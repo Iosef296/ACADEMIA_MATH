@@ -105,6 +105,10 @@ export class OcrComponent implements OnDestroy {
       });
   }
 
+  get latexLines(): string[] {
+    return (this.extractedLatex || '').split('\n').filter(l => l.trim());
+  }
+
   copyLatex(): void {
     navigator.clipboard.writeText(this.extractedLatex).then(() => {
       this.copied = true;

@@ -109,6 +109,8 @@ public class OcrController {
         if (choices.isEmpty() || choices.get(0) == null) {
             throw new RuntimeException("No choices in response from " + model + ": " + resp.getBody());
         }
-        return choices.get(0).path("message").path("content").asText("").trim();
+        String raw = choices.get(0).path("message").path("content").asText("").trim();
+        // Strip invisible math Unicode (U+2061–U+2064, zero-width, BOM) that KaTeX can't render
+        return raw.replaceAll("[\\u2061-\\u2064\\u200B-\\u200F\\uFEFF]", "");
     }
 }
