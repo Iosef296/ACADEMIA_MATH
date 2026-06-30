@@ -47,6 +47,7 @@ public class ForumServiceImpl implements ForumService {
     @Transactional
     public ForumPostResponse create(ForumPostRequest request, UUID userId) {
         ForumPost post = ForumPost.builder()
+                .title(request.getTitle())
                 .content(request.getContent())
                 .user(userRepository.findById(userId)
                         .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuario no encontrado")))
@@ -77,6 +78,7 @@ public class ForumServiceImpl implements ForumService {
     private ForumPostResponse toResponse(ForumPost p) {
         return ForumPostResponse.builder()
                 .id(p.getId())
+                .title(p.getTitle())
                 .content(p.getContent())
                 .author(ForumPostResponse.AuthorRef.builder()
                         .id(p.getUser() != null ? p.getUser().getId() : null)

@@ -38,6 +38,9 @@ public class ForumPost {
     @Builder.Default
     private List<ForumPost> replies = new ArrayList<>();
 
+    @Column(length = 255)
+    private String title;
+
     @Column(columnDefinition = "text", nullable = false)
     private String content;
 
