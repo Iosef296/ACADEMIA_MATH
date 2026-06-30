@@ -22,7 +22,7 @@ public class OcrController {
     private String openRouterKey;
 
     private static final String OR_URL   = "https://openrouter.ai/api/v1/chat/completions";
-    private static final String MODEL    = "qwen/qwen2.5-vl-7b-instruct:free";
+    private static final String MODEL    = "google/gemma-4-31b-it:free";
 
     private static final String PROMPT =
         "Eres un experto en matemáticas. Esta imagen contiene ejercicios o apuntes " +
