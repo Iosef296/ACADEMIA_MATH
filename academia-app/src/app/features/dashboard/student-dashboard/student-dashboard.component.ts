@@ -171,8 +171,25 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
     return this.progressList.reduce((sum, p) => sum + (p.exercises_solved ?? 0), 0);
   }
 
+  xpForLevel(n: number): number {
+    return 50 * n * (n - 1);
+  }
+
   get currentLevel(): number {
-    return Math.floor(this.totalXp / 100) + 1;
+    if (this.totalXp <= 0) return 1;
+    return Math.max(1, Math.floor((1 + Math.sqrt(1 + 4 * this.totalXp / 50)) / 2));
+  }
+
+  get xpInCurrentLevel(): number {
+    return this.totalXp - this.xpForLevel(this.currentLevel);
+  }
+
+  get xpNeededForNextLevel(): number {
+    return this.currentLevel * 100;
+  }
+
+  get xpProgressPercent(): number {
+    return Math.min((this.xpInCurrentLevel / this.xpNeededForNextLevel) * 100, 100);
   }
 
   get nextLevelReward(): LevelReward | null {

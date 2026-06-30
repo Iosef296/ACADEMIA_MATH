@@ -51,7 +51,7 @@
     <!-- XP progress bar -->
     <div class="mt-5">
       <div class="flex justify-between text-xs text-white text-opacity-70 mb-1.5">
-        <span>{{ totalXp % 100 }} / 100 XP al siguiente nivel</span>
+        <span>{{ xpInCurrentLevel }} / {{ xpNeededForNextLevel }} XP al siguiente nivel</span>
         <span *ngIf="nextLevelReward">
           Nivel {{ currentLevel + 1 }} · {{ nextLevelReward.title }} {{ nextLevelReward.emoji }} →
         </span>
@@ -59,7 +59,7 @@
       </div>
       <div class="h-2.5 bg-white bg-opacity-20 rounded-full overflow-hidden">
         <div class="h-full bg-yellow-400 rounded-full transition-all duration-700"
-          [style.width.%]="totalXp % 100 || 0"></div>
+          [style.width.%]="xpProgressPercent"></div>
       </div>
     </div>
   </div>

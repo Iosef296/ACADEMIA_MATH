@@ -84,7 +84,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void setLevel(UUID id, int level) {
         User user = findUser(id);
-        user.setManualXp(Math.max(0, (level - 1) * 100));
+        user.setManualXp(Math.max(0, 50 * level * (level - 1)));
         userRepository.save(user);
     }
 
