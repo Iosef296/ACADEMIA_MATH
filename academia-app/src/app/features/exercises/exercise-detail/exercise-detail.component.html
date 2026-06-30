@@ -479,7 +479,7 @@
     <div *ngIf="showVariableManager" class="bg-purple-50 border border-purple-200 rounded-xl p-6 space-y-5">
 
       <p class="text-xs text-purple-700">
-        Usa <code class="bg-purple-100 px-1 rounded">${'{'}varName{'}'}</code> en el enunciado para insertar valores generados. Ej: <code class="bg-purple-100 px-1 rounded">Resuelve $x^2 + ${'{'}a{'}'}x + ${'{'}b{'}'} = 0$</code>
+        Usa <code class="bg-purple-100 px-1 rounded">$&#123;varName&#125;</code> en el enunciado para insertar valores generados. Ej: <code class="bg-purple-100 px-1 rounded">Resuelve $x^2 + $&#123;a&#125;x + $&#123;b&#125; = 0$</code>
       </p>
 
       <!-- Alerts -->
@@ -497,7 +497,7 @@
           <div *ngIf="editingVarId !== v.id">
             <div class="flex items-start justify-between gap-3">
               <div class="flex-1 min-w-0 space-y-1">
-                <p class="text-sm font-bold text-purple-800 font-mono">${'{'}{{ v.varName }}{'}'}</p>
+                <p class="text-sm font-bold text-purple-800 font-mono">$&#123;{{ v.varName }}&#125;</p>
                 <div class="flex flex-wrap gap-3 text-xs text-gray-600">
                   <span>Rango: <strong>{{ v.minVal ?? '?' }} – {{ v.maxVal ?? '?' }}</strong></span>
                   <span *ngIf="v.stepVal">Paso: <strong>{{ v.stepVal }}</strong></span>
