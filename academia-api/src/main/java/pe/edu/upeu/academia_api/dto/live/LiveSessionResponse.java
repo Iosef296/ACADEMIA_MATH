@@ -12,6 +12,7 @@ import java.util.UUID;
 public class LiveSessionResponse {
     private UUID id;
     private String title;
+    private String course;
     private String jitsiRoomId;
     private UUID teacherId;
     private String teacherName;

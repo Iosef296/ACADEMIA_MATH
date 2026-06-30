@@ -23,6 +23,9 @@ public class LiveSession {
     @Column(nullable = false)
     private String title;
 
+    @Column
+    private String course;
+
     @Column(name = "jitsi_room_id", nullable = false)
     private String jitsiRoomId;
 

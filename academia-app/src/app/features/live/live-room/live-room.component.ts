@@ -7,6 +7,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -31,6 +32,9 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
   error = '';
   user: User | null = null;
 
+  showWhiteboard = false;
+  whiteboardUrl: SafeResourceUrl = '';
+
   private jitsiApi: any = null;
   jitsiReady = false;
 
@@ -42,6 +46,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
     private api: ApiService,
     private store: Store,
     private cdr: ChangeDetectorRef,
+    private sanitizer: DomSanitizer,
   ) {}
 
   ngOnInit(): void {
@@ -71,6 +76,9 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (session) => {
           this.session = session;
+          this.whiteboardUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+            `https://excalidraw.com/#room=${session.jitsiRoomId},${session.jitsiRoomId}`
+          );
           this.loading = false;
           this.cdr.detectChanges();
           if (session.status === 'ENDED') {
@@ -119,6 +127,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
       parentNode: this.jitsiContainer.nativeElement,
       width: '100%',
       height: '100%',
+      lang: 'es',
       userInfo: {
         displayName: this.user?.name || 'Participante',
       },
@@ -127,6 +136,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
         startWithVideoMuted: false,
         disableDeepLinking: true,
         prejoinPageEnabled: false,
+        defaultLanguage: 'es',
       },
       interfaceConfigOverwrite: {
         TOOLBAR_BUTTONS: [
@@ -153,6 +163,11 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
       this.jitsiApi.dispose();
       this.jitsiApi = null;
     }
+  }
+
+  toggleWhiteboard(): void {
+    this.showWhiteboard = !this.showWhiteboard;
+    this.cdr.detectChanges();
   }
 
   endSession(): void {

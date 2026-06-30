@@ -9,6 +9,7 @@ import { User } from '../../../store/auth/auth.state';
 export interface LiveSession {
   id: string;
   title: string;
+  course?: string;
   jitsiRoomId: string;
   teacherId: string;
   teacherName: string;
@@ -17,6 +18,13 @@ export interface LiveSession {
   status: string;
   createdAt: string;
 }
+
+export interface CourseGroup {
+  course: string;
+  sessions: LiveSession[];
+}
+
+export const COURSES = ['Álgebra', 'Cálculo', 'Aritmética', 'Geometría', 'Estadística'];
 
 @Component({
   selector: 'app-live-list',
@@ -28,10 +36,16 @@ export class LiveListComponent implements OnInit, OnDestroy {
   loading = true;
   user: User | null = null;
 
+  readonly courses = COURSES;
+
   // Create form
   showCreateModal = false;
   newTitle = '';
+  newCourse = '';
   creating = false;
+
+  // Accordion state for past sessions
+  expandedCourse: string | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -66,6 +80,26 @@ export class LiveListComponent implements OnInit, OnDestroy {
     return this.sessions.filter(s => s.status !== 'ACTIVE');
   }
 
+  get pastByCourse(): CourseGroup[] {
+    const map = new Map<string, LiveSession[]>();
+    for (const s of this.past) {
+      const key = s.course || 'Sin curso';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(s);
+    }
+    // Order: predefined courses first, then 'Sin curso'
+    const ordered: CourseGroup[] = [];
+    for (const c of COURSES) {
+      if (map.has(c)) ordered.push({ course: c, sessions: map.get(c)! });
+    }
+    if (map.has('Sin curso')) ordered.push({ course: 'Sin curso', sessions: map.get('Sin curso')! });
+    return ordered;
+  }
+
+  toggleCourse(course: string): void {
+    this.expandedCourse = this.expandedCourse === course ? null : course;
+  }
+
   loadSessions(): void {
     this.loading = true;
     this.api.get<LiveSession[]>('live')
@@ -85,25 +119,28 @@ export class LiveListComponent implements OnInit, OnDestroy {
 
   openCreateModal(): void {
     this.newTitle = '';
+    this.newCourse = '';
     this.showCreateModal = true;
   }
 
   closeCreateModal(): void {
     this.showCreateModal = false;
     this.newTitle = '';
+    this.newCourse = '';
   }
 
   createSession(): void {
-    if (!this.newTitle.trim()) return;
+    if (!this.newTitle.trim() || !this.newCourse) return;
     this.creating = true;
 
-    this.api.post<LiveSession>('live', { title: this.newTitle.trim() })
+    this.api.post<LiveSession>('live', { title: this.newTitle.trim(), course: this.newCourse })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (session) => {
           this.creating = false;
           this.showCreateModal = false;
           this.newTitle = '';
+          this.newCourse = '';
           this.sessions.unshift(session);
           this.cdr.detectChanges();
         },

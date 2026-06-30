@@ -38,3 +38,4 @@ desktop.ini
 application-local.yml
 application-local.properties
 .env
+.claude

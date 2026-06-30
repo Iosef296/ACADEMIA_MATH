@@ -35,11 +35,32 @@
       </span>
       <div>
         <p class="text-white font-semibold text-sm">{{ session.title }}</p>
-        <p class="text-gray-400 text-xs">{{ session.teacherName }}</p>
+        <p class="text-gray-400 text-xs">
+          <span *ngIf="session.course" class="text-blue-400 font-medium mr-1">{{ session.course }} ·</span>
+          {{ session.teacherName }}
+        </p>
       </div>
     </div>
 
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2">
+
+      <!-- Whiteboard toggle -->
+      <button (click)="toggleWhiteboard()"
+        [class.bg-amber-500]="showWhiteboard"
+        [class.hover:bg-amber-600]="showWhiteboard"
+        [class.bg-gray-700]="!showWhiteboard"
+        [class.hover:bg-gray-600]="!showWhiteboard"
+        class="flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-semibold rounded-lg transition"
+        title="Pizarra compartida">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M15.232 5.232l3.536 3.536M9 11l6.071-6.071a2 2 0 012.829 0l.171.171a2 2 0 010 2.829L12 14H9v-3z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 20h18" />
+        </svg>
+        Pizarra
+      </button>
+
       <!-- End session (owner only) -->
       <button *ngIf="isOwner"
         (click)="endSession()"
@@ -68,17 +89,46 @@
     </div>
   </div>
 
-  <!-- Jitsi container -->
-  <div class="flex-1 relative">
-    <div *ngIf="!jitsiReady"
-      class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400">
-      <svg class="animate-spin w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-      </svg>
-      <p class="text-sm">Conectando a la sala...</p>
+  <!-- Main content: video + optional whiteboard -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Jitsi container -->
+    <div [class.w-full]="!showWhiteboard" [class.w-1/2]="showWhiteboard" class="relative transition-all duration-300">
+      <div *ngIf="!jitsiReady"
+        class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400">
+        <svg class="animate-spin w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        <p class="text-sm">Conectando a la sala...</p>
+      </div>
+      <div #jitsiContainer class="w-full h-full"></div>
     </div>
-    <div #jitsiContainer class="w-full h-full"></div>
+
+    <!-- Whiteboard panel -->
+    <div *ngIf="showWhiteboard"
+      class="w-1/2 border-l border-gray-700 flex flex-col bg-white">
+      <!-- Whiteboard header -->
+      <div class="flex items-center justify-between px-4 py-2.5 bg-gray-100 border-b border-gray-200 shrink-0">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15.232 5.232l3.536 3.536M9 11l6.071-6.071a2 2 0 012.829 0l.171.171a2 2 0 010 2.829L12 14H9v-3z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 20h18" />
+          </svg>
+          <span class="text-sm font-semibold text-gray-700">Pizarra compartida</span>
+        </div>
+        <span class="text-xs text-gray-400">Todos pueden ver y dibujar</span>
+      </div>
+      <!-- Excalidraw iframe -->
+      <iframe
+        [src]="whiteboardUrl"
+        class="flex-1 w-full border-0"
+        allow="clipboard-read; clipboard-write"
+        title="Pizarra compartida">
+      </iframe>
+    </div>
+
   </div>
 
 </div>

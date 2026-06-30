@@ -40,6 +40,7 @@ public class LiveServiceImpl implements LiveService {
     public LiveSessionResponse create(LiveSessionRequest request, UUID teacherId) {
         LiveSession session = LiveSession.builder()
                 .title(request.getTitle())
+                .course(request.getCourse())
                 .jitsiRoomId("academia-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12))
                 .startTime(request.getStartTime() != null ? request.getStartTime() : LocalDateTime.now())
                 .status("ACTIVE")
@@ -74,6 +75,7 @@ public class LiveServiceImpl implements LiveService {
     private LiveSessionResponse toResponse(LiveSession s) {
         return LiveSessionResponse.builder()
                 .id(s.getId()).title(s.getTitle())
+                .course(s.getCourse())
                 .jitsiRoomId(s.getJitsiRoomId())
                 .teacherId(s.getTeacher() != null ? s.getTeacher().getId() : null)
                 .teacherName(s.getTeacher() != null ? s.getTeacher().getName() : null)

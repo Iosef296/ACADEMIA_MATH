@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class LiveSessionRequest {
     @NotBlank
     private String title;
+    private String course;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 }

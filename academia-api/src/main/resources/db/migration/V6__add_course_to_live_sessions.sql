@@ -1,0 +1,1 @@
+ALTER TABLE live_sessions ADD COLUMN IF NOT EXISTS course VARCHAR(100);
