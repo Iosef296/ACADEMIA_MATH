@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 COPY gradlew settings.gradle.kts build.gradle.kts ./
