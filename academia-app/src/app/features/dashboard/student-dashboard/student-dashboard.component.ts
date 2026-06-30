@@ -61,10 +61,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.user$ = this.store.select(selectCurrentUser);
     this.user$.pipe(takeUntil(this.destroy$)).subscribe(user => {
-      const role = user?.role ?? 'student';
-      if (role === 'student') {
-        this.loadDashboard();
-      }
+      if (user) this.loadDashboard();
     });
   }
 
