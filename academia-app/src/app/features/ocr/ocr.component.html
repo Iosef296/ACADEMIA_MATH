@@ -132,6 +132,14 @@
         </div>
       </div>
 
+      <!-- LaTeX rendered preview -->
+      <div *ngIf="extractedLatex" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Vista previa</h3>
+        <div class="bg-gray-50 rounded-xl p-4 overflow-x-auto">
+          <app-latex-renderer [latex]="extractedLatex" [displayMode]="true"></app-latex-renderer>
+        </div>
+      </div>
+
       <!-- Success actions -->
       <div *ngIf="state === 'done'" class="flex gap-2">
         <a routerLink="/editor/new"
