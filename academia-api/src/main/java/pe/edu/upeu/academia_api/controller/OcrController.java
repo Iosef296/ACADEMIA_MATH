@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import pe.edu.upeu.academia_api.util.MathLatexConverter;
@@ -21,8 +22,14 @@ public class OcrController {
     @Value("${openrouter.api.key:}")
     private String openRouterKey;
 
-    private static final String OR_URL   = "https://openrouter.ai/api/v1/chat/completions";
-    private static final String MODEL    = "google/gemma-4-31b-it:free";
+    private static final String OR_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+    private static final List<String> MODELS = List.of(
+        "google/gemma-4-31b-it:free",
+        "nvidia/nemotron-nano-12b-v2-vl:free",
+        "google/gemma-4-26b-a4b-it:free",
+        "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+    );
 
     private static final String PROMPT =
         "Eres un experto en matemáticas. Esta imagen contiene ejercicios o apuntes " +
@@ -39,7 +46,7 @@ public class OcrController {
             try {
                 String base64   = Base64.getEncoder().encodeToString(image.getBytes());
                 String mimeType = Objects.requireNonNullElse(image.getContentType(), "image/jpeg");
-                String latex    = callOpenRouter(base64, mimeType);
+                String latex    = callWithFallback(base64, mimeType);
                 return ResponseEntity.ok(Map.of("latex", latex, "text", latex));
             } catch (Exception e) {
                 System.err.println("[OCR] OpenRouter error: " + e.getMessage());
@@ -57,7 +64,20 @@ public class OcrController {
         return ResponseEntity.ok(Map.of("latex", MathLatexConverter.convert(text)));
     }
 
-    private String callOpenRouter(String base64Image, String mimeType) throws Exception {
+    private String callWithFallback(String base64Image, String mimeType) throws Exception {
+        Exception lastError = null;
+        for (String model : MODELS) {
+            try {
+                return callOpenRouter(base64Image, mimeType, model);
+            } catch (HttpClientErrorException e) {
+                System.err.println("[OCR] Model " + model + " failed (" + e.getStatusCode() + "), trying next...");
+                lastError = e;
+            }
+        }
+        throw lastError != null ? lastError : new RuntimeException("All OCR models failed");
+    }
+
+    private String callOpenRouter(String base64Image, String mimeType, String model) throws Exception {
         RestTemplate rt = new RestTemplate();
 
         Map<String, Object> textContent  = Map.of("type", "text", "text", PROMPT);
@@ -70,7 +90,7 @@ public class OcrController {
             "content", List.of(textContent, imageContent)
         );
         Map<String, Object> reqBody = Map.of(
-            "model", MODEL,
+            "model", model,
             "messages", List.of(message),
             "max_tokens", 2048
         );
