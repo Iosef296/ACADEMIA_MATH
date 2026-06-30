@@ -106,7 +106,10 @@ export class OcrComponent implements OnDestroy {
   }
 
   get latexLines(): string[] {
-    return (this.extractedLatex || '').split('\n').filter(l => l.trim());
+    return (this.extractedLatex || '')
+      .split('\n')
+      .map(l => l.replace(/\\\\+$/, '').trim())
+      .filter(l => l.length > 0);
   }
 
   copyLatex(): void {
