@@ -67,7 +67,9 @@ public class OcrController {
         Exception lastError = null;
         for (String model : MODELS) {
             try {
-                return callOpenRouter(base64Image, mimeType, model);
+                String result = callOpenRouter(base64Image, mimeType, model);
+                System.out.println("[OCR] Model " + model + " succeeded.");
+                return result;
             } catch (Exception e) {
                 System.err.println("[OCR] Model " + model + " failed: " + e.getMessage() + ", trying next...");
                 lastError = e;
