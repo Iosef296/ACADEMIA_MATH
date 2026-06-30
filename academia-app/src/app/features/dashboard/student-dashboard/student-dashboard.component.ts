@@ -108,9 +108,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   }
 
   get topTopics(): ProgressSummary[] {
-    return [...this.progressList]
-      .sort((a, b) => b.xp - a.xp)
-      .slice(0, 5);
+    return [...this.progressList].sort((a, b) => b.xp - a.xp).slice(0, 5);
   }
 
   get errorTopics(): ProgressSummary[] {
@@ -118,5 +116,13 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
       .filter(p => p.error_count > 0)
       .sort((a, b) => b.error_count - a.error_count)
       .slice(0, 3);
+  }
+
+  get totalExercisesSolved(): number {
+    return this.progressList.reduce((sum, p) => sum + p.exercises_solved, 0);
+  }
+
+  get currentLevel(): number {
+    return Math.floor(this.totalXp / 100) + 1;
   }
 }
