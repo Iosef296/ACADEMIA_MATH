@@ -175,6 +175,30 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
     return Math.floor(this.totalXp / 100) + 1;
   }
 
+  get nextLevelReward(): LevelReward | null {
+    return this.levelRewards.find(r => r.level === this.currentLevel + 1) ?? null;
+  }
+
+  getLevelGradient(level: number): string {
+    if (level >= 100) return 'linear-gradient(135deg,#FFD700,#FF6B35,#FF1744)';
+    if (level >= 50)  return 'linear-gradient(135deg,#FF1744,#D500F9)';
+    if (level >= 30)  return 'linear-gradient(135deg,#FF8F00,#FFD600)';
+    if (level >= 20)  return 'linear-gradient(135deg,#AA00FF,#6200EA)';
+    if (level >= 10)  return 'linear-gradient(135deg,#1565C0,#00B8D4)';
+    if (level >= 5)   return 'linear-gradient(135deg,#2E7D32,#00BFA5)';
+    return 'rgba(255,255,255,0.15)';
+  }
+
+  getHeaderGradient(level: number): string {
+    if (level >= 100) return 'from-yellow-500 via-orange-600 to-red-700';
+    if (level >= 50)  return 'from-red-600 to-purple-800';
+    if (level >= 30)  return 'from-orange-500 to-amber-600';
+    if (level >= 20)  return 'from-purple-700 to-fuchsia-700';
+    if (level >= 10)  return 'from-blue-500 to-cyan-600';
+    if (level >= 5)   return 'from-green-600 to-teal-600';
+    return 'from-blue-600 to-indigo-700';
+  }
+
   getMissionProgress(mission: DailyMission): number {
     switch (mission.missionType) {
       case 'exercises': return this.totalExercisesSolved;

@@ -80,6 +80,14 @@ public class UserServiceImpl implements UserService {
         userRepository.deleteById(id);
     }
 
+    @Override
+    @Transactional
+    public void setLevel(UUID id, int level) {
+        User user = findUser(id);
+        user.setManualXp(Math.max(0, (level - 1) * 100));
+        userRepository.save(user);
+    }
+
     private User findUser(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));

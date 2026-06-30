@@ -58,6 +58,10 @@ public class User {
     @Column(name = "last_access_at")
     private LocalDateTime lastAccessAt;
 
+    @Column(name = "manual_xp")
+    @Builder.Default
+    private Integer manualXp = 0;
+
     @Column(name = "avatar_url")
     private String avatarUrl;
 

@@ -34,23 +34,28 @@
 
   <!-- Greeting header -->
   <div *ngIf="user$ | async as user"
-    class="mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-md">
+    class="mb-6 bg-gradient-to-r rounded-2xl p-6 text-white shadow-md"
+    [ngClass]="getHeaderGradient(currentLevel)">
     <div class="flex items-start justify-between">
       <div>
-        <p class="text-blue-200 text-sm mb-1">{{ today | date:"EEEE, d 'de' MMMM":undefined:'es' }}</p>
+        <p class="text-white text-opacity-70 text-sm mb-1">{{ today | date:"EEEE, d 'de' MMMM":undefined:'es' }}</p>
         <h1 class="text-3xl font-bold">¡Hola, {{ user.name }}! 👋</h1>
-        <p class="text-blue-200 mt-1 text-sm">Sigue practicando para alcanzar tu meta</p>
+        <p class="text-white text-opacity-70 mt-1 text-sm">Sigue practicando para alcanzar tu meta</p>
       </div>
-      <div class="bg-white bg-opacity-20 rounded-xl px-5 py-3 text-center shrink-0">
-        <p class="text-xs text-blue-200 uppercase tracking-wide">Nivel</p>
+      <div class="rounded-xl px-5 py-3 text-center shrink-0 border border-white border-opacity-30"
+        [style.background]="getLevelGradient(currentLevel)">
+        <p class="text-xs text-white text-opacity-80 uppercase tracking-wide font-semibold">Nivel</p>
         <p class="text-3xl font-bold leading-none mt-1">{{ currentLevel }}</p>
       </div>
     </div>
     <!-- XP progress bar -->
     <div class="mt-5">
-      <div class="flex justify-between text-xs text-blue-200 mb-1.5">
+      <div class="flex justify-between text-xs text-white text-opacity-70 mb-1.5">
         <span>{{ totalXp % 100 }} / 100 XP al siguiente nivel</span>
-        <span>Nivel {{ currentLevel + 1 }} →</span>
+        <span *ngIf="nextLevelReward">
+          Nivel {{ currentLevel + 1 }} · {{ nextLevelReward.title }} {{ nextLevelReward.emoji }} →
+        </span>
+        <span *ngIf="!nextLevelReward">Nivel {{ currentLevel + 1 }} →</span>
       </div>
       <div class="h-2.5 bg-white bg-opacity-20 rounded-full overflow-hidden">
         <div class="h-full bg-yellow-400 rounded-full transition-all duration-700"

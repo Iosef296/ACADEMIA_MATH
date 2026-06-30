@@ -15,4 +15,5 @@ public interface UserService {
     List<UserDTO> search(String query);
     UserDTO updateRole(UUID id, String role);
     void delete(UUID id);
+    void setLevel(UUID id, int level);
 }

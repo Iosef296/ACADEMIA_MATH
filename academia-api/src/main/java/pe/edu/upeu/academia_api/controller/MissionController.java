@@ -10,6 +10,7 @@ import pe.edu.upeu.academia_api.entity.DailyMission;
 import pe.edu.upeu.academia_api.entity.UserMissionClaim;
 import pe.edu.upeu.academia_api.repository.DailyMissionRepository;
 import pe.edu.upeu.academia_api.repository.UserMissionClaimRepository;
+import pe.edu.upeu.academia_api.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +25,7 @@ public class MissionController {
 
     private final DailyMissionRepository repo;
     private final UserMissionClaimRepository claimRepo;
+    private final UserRepository userRepo;
 
     @GetMapping
     public ResponseEntity<List<DailyMission>> findActive() {
@@ -83,10 +85,11 @@ public class MissionController {
                 .missionId(id)
                 .claimedAt(LocalDateTime.now())
                 .build());
-        int bonusXp = claimRepo.findByUserId(userId).stream()
+        int missionXp = claimRepo.findByUserId(userId).stream()
                 .mapToInt(c -> repo.findById(c.getMissionId()).map(DailyMission::getRewardXp).orElse(0))
                 .sum();
-        return ResponseEntity.ok(Map.of("bonusXp", bonusXp, "earned", mission.getRewardXp()));
+        int manualXp = userRepo.findById(userId).map(u -> u.getManualXp() != null ? u.getManualXp() : 0).orElse(0);
+        return ResponseEntity.ok(Map.of("bonusXp", missionXp + manualXp, "earned", mission.getRewardXp()));
     }
 
     @GetMapping("/claimed")
@@ -101,9 +104,10 @@ public class MissionController {
     @GetMapping("/bonus-xp")
     public ResponseEntity<Map<String, Integer>> getBonusXp(Authentication auth) {
         UUID userId = UUID.fromString(auth.getName());
-        int bonus = claimRepo.findByUserId(userId).stream()
+        int missionXp = claimRepo.findByUserId(userId).stream()
                 .mapToInt(c -> repo.findById(c.getMissionId()).map(DailyMission::getRewardXp).orElse(0))
                 .sum();
-        return ResponseEntity.ok(Map.of("bonusXp", bonus));
+        int manualXp = userRepo.findById(userId).map(u -> u.getManualXp() != null ? u.getManualXp() : 0).orElse(0);
+        return ResponseEntity.ok(Map.of("bonusXp", missionXp + manualXp));
     }
 }

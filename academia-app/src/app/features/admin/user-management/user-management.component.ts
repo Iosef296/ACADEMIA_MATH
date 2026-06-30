@@ -31,6 +31,10 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   deletingId: number | null = null;
   confirmDeleteId: number | null = null;
 
+  // Set level
+  setLevelUserId: number | null = null;
+  setLevelValue = 1;
+
   error = '';
   success = '';
 
@@ -105,6 +109,35 @@ export class UserManagementComponent implements OnInit, OnDestroy {
           this.savingId = null;
           this.error = 'Error al cambiar el rol.';
           setTimeout(() => (this.error = ''), 3000);
+        },
+      });
+  }
+
+  openSetLevel(user: User): void {
+    this.setLevelUserId = user.id;
+    this.setLevelValue = 1;
+    this.editingId = null;
+    this.confirmDeleteId = null;
+  }
+
+  cancelSetLevel(): void {
+    this.setLevelUserId = null;
+  }
+
+  saveLevel(user: User): void {
+    if (!this.setLevelValue || this.setLevelValue < 1) return;
+    this.api.put(`users/${user.id}/level`, { level: this.setLevelValue })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.setLevelUserId = null;
+          this.success = `Nivel de ${user.name} establecido a ${this.setLevelValue}.`;
+          setTimeout(() => (this.success = ''), 3000);
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.error = 'Error al cambiar nivel.';
+          this.cdr.detectChanges();
         },
       });
   }

@@ -59,4 +59,11 @@ public class UserController {
         userService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}/level")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> setLevel(@PathVariable UUID id, @RequestBody Map<String, Integer> body) {
+        userService.setLevel(id, body.get("level"));
+        return ResponseEntity.noContent().build();
+    }
 }

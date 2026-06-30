@@ -100,13 +100,21 @@
             <div class="flex items-center gap-2 justify-end">
 
               <!-- Edit role -->
-              <ng-container *ngIf="editingId !== user.id">
+              <ng-container *ngIf="editingId !== user.id && setLevelUserId !== user.id">
                 <button (click)="startEdit(user)"
                   class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                   title="Cambiar rol">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+                <button (click)="openSetLevel(user)"
+                  class="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                  title="Establecer nivel">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                   </svg>
                 </button>
                 <button (click)="confirmDelete(user.id)"
@@ -117,6 +125,19 @@
                       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
                 </button>
+              </ng-container>
+
+              <!-- Set level inline -->
+              <ng-container *ngIf="setLevelUserId === user.id">
+                <div class="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-lg px-2 py-1">
+                  <span class="text-xs text-purple-700 font-medium">Nivel:</span>
+                  <input [(ngModel)]="setLevelValue" type="number" min="1" max="100"
+                    class="w-14 border border-purple-300 rounded px-1.5 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-purple-500" />
+                  <button (click)="saveLevel(user)"
+                    class="text-xs font-semibold text-purple-600 hover:text-purple-800 transition">OK</button>
+                  <span class="text-purple-300">|</span>
+                  <button (click)="cancelSetLevel()" class="text-xs text-gray-500 hover:text-gray-700 transition">✕</button>
+                </div>
               </ng-container>
 
               <!-- Save / cancel role edit -->
