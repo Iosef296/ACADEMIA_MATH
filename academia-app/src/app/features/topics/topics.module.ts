@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, Routes } from '@angular/router';
 import { TopicListComponent } from './topic-list/topic-list.component';
 import { TopicDetailComponent } from './topic-detail/topic-detail.component';
+import { SharedModule } from '../../shared/shared.module';
 
 const routes: Routes = [
   { path: '', component: TopicListComponent },
@@ -12,6 +13,6 @@ const routes: Routes = [
 
 @NgModule({
   declarations: [TopicListComponent, TopicDetailComponent],
-  imports: [CommonModule, FormsModule, RouterModule.forChild(routes)],
+  imports: [CommonModule, FormsModule, RouterModule.forChild(routes), SharedModule],
 })
 export class TopicsModule {}

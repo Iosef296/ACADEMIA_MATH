@@ -475,6 +475,11 @@
             <label class="block text-xs font-medium text-gray-600 mb-1">Enunciado (LaTeX)</label>
             <textarea [(ngModel)]="createExForm.contentLatex" rows="3" placeholder="Ej: Resuelve $2x + 3 = 7$"
               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"></textarea>
+            <div *ngIf="createExForm.contentLatex.trim()"
+              class="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-100 text-sm text-gray-800 leading-relaxed">
+              <p class="text-xs text-gray-400 mb-1">Vista previa:</p>
+              <app-latex-renderer [latex]="createExForm.contentLatex"></app-latex-renderer>
+            </div>
           </div>
 
           <!-- Dificultad -->
@@ -611,6 +616,11 @@
             <label class="block text-xs font-medium text-gray-600 mb-1">Enunciado (LaTeX)</label>
             <textarea [(ngModel)]="editExForm.contentLatex" rows="3"
               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"></textarea>
+            <div *ngIf="editExForm.contentLatex.trim()"
+              class="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-100 text-sm text-gray-800 leading-relaxed">
+              <p class="text-xs text-gray-400 mb-1">Vista previa:</p>
+              <app-latex-renderer [latex]="editExForm.contentLatex"></app-latex-renderer>
+            </div>
           </div>
 
           <div>
