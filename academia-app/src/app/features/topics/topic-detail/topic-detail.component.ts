@@ -9,9 +9,10 @@ import { selectUserRole } from '../../../store/auth/auth.selectors';
 interface Exercise {
   id: string;
   title: string;
-  difficulty: 'basic' | 'intermediate' | 'advanced';
-  is_parametric: boolean;
-  needs_graph: boolean;
+  contentLatex?: string;
+  difficulty: string;
+  isParametric?: boolean;
+  needsGraph?: boolean;
 }
 
 interface Topic {
@@ -79,6 +80,30 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
   confirmDeleteId: string | null = null;
   deletingId: string | null = null;
 
+  // Edit current topic (the tema being viewed)
+  showEditCurrent = false;
+  editCurrentForm = { name: '', description: '', difficulty: 'basico', estimated_minutes: 0 };
+  savingCurrent = false;
+
+  // Exercise CRUD
+  showCreateEx = false;
+  createExForm = { title: '', contentLatex: '', difficulty: 'basic', isParametric: false, needsGraph: false };
+  creatingEx = false;
+
+  showEditEx = false;
+  editingEx: Exercise | null = null;
+  editExForm = { title: '', contentLatex: '', difficulty: 'basic', isParametric: false, needsGraph: false };
+  savingEx = false;
+
+  confirmDeleteExId: string | null = null;
+  deletingExId: string | null = null;
+
+  exerciseDifficulties = [
+    { value: 'basic', label: 'Básico' },
+    { value: 'intermediate', label: 'Intermedio' },
+    { value: 'advanced', label: 'Avanzado' },
+  ];
+
   difficulties = [
     { value: 'basico', label: 'Básico' },
     { value: 'intermedio', label: 'Intermedio' },
@@ -126,9 +151,9 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
     return this.progress.xp % 100;
   }
 
-  get basicExercises()        { return this.exercises.filter(e => e.difficulty === 'basic'); }
-  get intermediateExercises() { return this.exercises.filter(e => e.difficulty === 'intermediate'); }
-  get advancedExercises()     { return this.exercises.filter(e => e.difficulty === 'advanced'); }
+  get basicExercises()        { return this.exercises.filter(e => e.difficulty?.toLowerCase() === 'basic'); }
+  get intermediateExercises() { return this.exercises.filter(e => e.difficulty?.toLowerCase() === 'intermediate'); }
+  get advancedExercises()     { return this.exercises.filter(e => e.difficulty?.toLowerCase() === 'advanced'); }
 
   // Only temas (child topics with parent_id) as prereq options
   get prereqOptionsCreate(): Topic[] {
@@ -277,6 +302,142 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
         error: () => {
           this.deletingId = null;
           this.error = 'Error al eliminar.';
+          setTimeout(() => (this.error = ''), 3000);
+        },
+      });
+  }
+
+  // ── Edit current tema ────────────────────────────────
+
+  startEditCurrent(): void {
+    if (!this.topic) return;
+    this.editCurrentForm = {
+      name: this.topic.name,
+      description: this.topic.description || '',
+      difficulty: this.topic.difficulty || 'basico',
+      estimated_minutes: this.topic.estimated_minutes || 0,
+    };
+    this.showEditCurrent = true;
+  }
+
+  cancelEditCurrent(): void { this.showEditCurrent = false; }
+
+  saveCurrentTopic(): void {
+    if (!this.topic || !this.editCurrentForm.name.trim()) return;
+    this.savingCurrent = true;
+    this.api.put(`topics/${this.topicId}`, {
+      name: this.editCurrentForm.name.trim(),
+      description: this.editCurrentForm.description.trim() || null,
+      difficulty: this.editCurrentForm.difficulty,
+      estimated_minutes: this.editCurrentForm.estimated_minutes || 0,
+      parent_id: this.topic.parent_id || null,
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.savingCurrent = false;
+          this.showEditCurrent = false;
+          this.success = 'Tema actualizado.';
+          setTimeout(() => (this.success = ''), 3000);
+          this.loadTopic();
+        },
+        error: () => {
+          this.savingCurrent = false;
+          this.error = 'Error al actualizar tema.';
+          setTimeout(() => (this.error = ''), 3000);
+        },
+      });
+  }
+
+  // ── Exercise CRUD ────────────────────────────────────
+
+  createExercise(): void {
+    if (!this.createExForm.title.trim()) return;
+    this.creatingEx = true;
+    this.api.post<Exercise>('exercises', {
+      title: this.createExForm.title.trim(),
+      contentLatex: this.createExForm.contentLatex.trim() || ' ',
+      difficulty: this.createExForm.difficulty.toUpperCase(),
+      isParametric: this.createExForm.isParametric,
+      needsGraph: this.createExForm.needsGraph,
+      topicId: this.topicId,
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.creatingEx = false;
+          this.showCreateEx = false;
+          this.createExForm = { title: '', contentLatex: '', difficulty: 'basic', isParametric: false, needsGraph: false };
+          this.success = 'Ejercicio creado.';
+          setTimeout(() => (this.success = ''), 3000);
+          this.loadTopic();
+        },
+        error: () => {
+          this.creatingEx = false;
+          this.error = 'Error al crear ejercicio.';
+          setTimeout(() => (this.error = ''), 3000);
+        },
+      });
+  }
+
+  startEditEx(ex: Exercise): void {
+    this.editingEx = ex;
+    this.editExForm = {
+      title: ex.title,
+      contentLatex: ex.contentLatex || '',
+      difficulty: ex.difficulty?.toLowerCase() || 'basic',
+      isParametric: ex.isParametric || false,
+      needsGraph: ex.needsGraph || false,
+    };
+    this.showEditEx = true;
+  }
+
+  cancelEditEx(): void { this.showEditEx = false; this.editingEx = null; }
+
+  saveExercise(): void {
+    if (!this.editingEx || !this.editExForm.title.trim()) return;
+    this.savingEx = true;
+    this.api.put(`exercises/${this.editingEx.id}`, {
+      title: this.editExForm.title.trim(),
+      contentLatex: this.editExForm.contentLatex.trim() || ' ',
+      difficulty: this.editExForm.difficulty.toUpperCase(),
+      isParametric: this.editExForm.isParametric,
+      needsGraph: this.editExForm.needsGraph,
+      topicId: this.topicId,
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.savingEx = false;
+          this.showEditEx = false;
+          this.editingEx = null;
+          this.success = 'Ejercicio actualizado.';
+          setTimeout(() => (this.success = ''), 3000);
+          this.loadTopic();
+        },
+        error: () => {
+          this.savingEx = false;
+          this.error = 'Error al actualizar ejercicio.';
+          setTimeout(() => (this.error = ''), 3000);
+        },
+      });
+  }
+
+  confirmDeleteEx(id: string): void { this.confirmDeleteExId = id; }
+  cancelDeleteEx(): void { this.confirmDeleteExId = null; }
+
+  deleteExercise(ex: Exercise): void {
+    this.deletingExId = ex.id;
+    this.api.delete(`exercises/${ex.id}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deletingExId = null;
+          this.confirmDeleteExId = null;
+          this.success = `"${ex.title}" eliminado.`;
+          setTimeout(() => (this.success = ''), 3000);
+          this.loadTopic();
+        },
+        error: () => {
+          this.deletingExId = null;
+          this.error = 'Error al eliminar ejercicio.';
           setTimeout(() => (this.error = ''), 3000);
         },
       });
