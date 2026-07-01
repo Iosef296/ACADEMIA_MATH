@@ -68,7 +68,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   ];
   selectedMood: string | null = null;
   moodSaved = false;
-  showMoodModal = true;
+  showMoodModal = localStorage.getItem('moodAnsweredDate') !== new Date().toDateString();
   Math = Math;
 
   private destroy$ = new Subject<void>();
@@ -144,11 +144,13 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   saveMood(mood: string): void {
     if (this.moodSaved) return;
     this.selectedMood = mood;
+    this.moodSaved = true;
     this.showMoodModal = false;
     localStorage.setItem('moodAnsweredDate', new Date().toDateString());
-    this.api.post('mood', { mood }).pipe(takeUntil(this.destroy$)).subscribe({ error: (err) => console.error('Error saving mood:', err) });
     const difficulty = this.moods.find(m => m.value === mood)?.difficulty ?? 'intermediate';
-    this.router.navigate(['/exercises'], { queryParams: { difficulty } });
+    localStorage.setItem('exerciseDifficulty', difficulty);
+    this.api.post('mood', { mood }).pipe(takeUntil(this.destroy$)).subscribe({ error: () => {} });
+    this.cdr.detectChanges();
   }
 
   closeMoodModal(): void {
