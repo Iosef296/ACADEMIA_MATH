@@ -15,6 +15,9 @@ interface ForumPost {
   exerciseId: string | null;
   parentId: string | null;
   replies: ForumPost[];
+  replyCount: number;
+  acceptedReplyId: string | null;
+  isAccepted: boolean;
   tags: string[];
   likeCount: number;
   likedByMe: boolean;
@@ -29,6 +32,14 @@ interface PageResp {
   totalElements: number;
 }
 
+interface Stats {
+  totalPosts: number;
+  unanswered: number;
+  topTags: { name: string; count: number }[];
+}
+
+type SortMode = 'recent' | 'liked' | 'unanswered' | 'solved';
+
 @Component({
   selector: 'app-forum-list',
   templateUrl: './forum-list.component.html',
@@ -41,13 +52,14 @@ export class ForumListComponent implements OnInit, OnDestroy {
   searchQuery = '';
   topicFilter: string | null = null;
   tagFilter: string | null = null;
+  sortMode: SortMode = 'recent';
 
   page = 0;
   size = 10;
   totalPages = 0;
   totalElements = 0;
 
-  availableTags: string[] = [];
+  stats: Stats = { totalPosts: 0, unanswered: 0, topTags: [] };
 
   showNewPost = false;
   newTitle = '';
@@ -59,6 +71,13 @@ export class ForumListComponent implements OnInit, OnDestroy {
   currentUserId: string | null = null;
   deletingId: string | null = null;
   likingId: string | null = null;
+
+  readonly sortTabs: { key: SortMode; label: string; icon: string }[] = [
+    { key: 'recent',     label: 'Recientes',    icon: '🕒' },
+    { key: 'liked',      label: 'Más gustados', icon: '🔥' },
+    { key: 'unanswered', label: 'Sin responder', icon: '❓' },
+    { key: 'solved',     label: 'Resueltos',    icon: '✓' },
+  ];
 
   private destroy$ = new Subject<void>();
 
@@ -75,7 +94,7 @@ export class ForumListComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(u => this.currentUserId = u?.id ?? null);
 
-    this.loadTags();
+    this.loadStats();
 
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
@@ -83,6 +102,8 @@ export class ForumListComponent implements OnInit, OnDestroy {
         next: (params) => {
           this.topicFilter = params['topicId'] ? String(params['topicId']) : null;
           this.tagFilter = params['tag'] ? String(params['tag']) : null;
+          const s = params['sort'] as SortMode;
+          this.sortMode = ['recent','liked','unanswered','solved'].includes(s) ? s : 'recent';
           this.reload();
         },
         error: (err) => console.error('Error reading query params:', err),
@@ -94,12 +115,12 @@ export class ForumListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  loadTags(): void {
-    this.api.get<string[]>('forum/tags')
+  loadStats(): void {
+    this.api.get<Stats>('forum/stats')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (data) => { this.availableTags = data ?? []; this.cdr.detectChanges(); },
-        error: (err) => console.error('Error loading tags:', err),
+        next: (data) => { this.stats = data; this.cdr.detectChanges(); },
+        error: (err) => console.error('Error loading stats:', err),
       });
   }
 
@@ -113,6 +134,7 @@ export class ForumListComponent implements OnInit, OnDestroy {
     const p: Record<string, string> = {
       page: String(this.page),
       size: String(this.size),
+      sort: this.sortMode,
     };
     if (this.topicFilter) p['topicId'] = this.topicFilter;
     if (this.tagFilter) p['tag'] = this.tagFilter;
@@ -153,9 +175,16 @@ export class ForumListComponent implements OnInit, OnDestroy {
     return this.page + 1 < this.totalPages;
   }
 
+  changeSort(mode: SortMode): void {
+    this.router.navigate([], {
+      queryParams: { sort: mode },
+      queryParamsHandling: 'merge',
+    });
+  }
+
   selectTag(tag: string | null): void {
     this.router.navigate([], {
-      queryParams: { tag: tag ?? null, topicId: this.topicFilter ?? null },
+      queryParams: { tag: tag ?? null },
       queryParamsHandling: 'merge',
     });
   }
@@ -172,12 +201,12 @@ export class ForumListComponent implements OnInit, OnDestroy {
     );
   }
 
-  replyCount(p: ForumPost): number {
-    return p.replies?.length ?? 0;
-  }
-
   isOwner(p: ForumPost): boolean {
     return !!this.currentUserId && p.author.id === this.currentUserId;
+  }
+
+  isSolved(p: ForumPost): boolean {
+    return !!p.acceptedReplyId;
   }
 
   deletePost(event: Event, p: ForumPost): void {
@@ -258,7 +287,7 @@ export class ForumListComponent implements OnInit, OnDestroy {
           this.newTitle = '';
           this.newBody = '';
           this.newTagsInput = '';
-          this.loadTags();
+          this.loadStats();
           this.router.navigate(['/forum', res.id]);
         },
         error: (err) => {

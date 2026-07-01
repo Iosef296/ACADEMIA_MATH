@@ -37,6 +37,10 @@ public class ForumPost {
     @JoinColumn(name = "parent_id")
     private ForumPost parent;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "accepted_reply_id")
+    private ForumPost acceptedReply;
+
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
     @Builder.Default
     private List<ForumPost> replies = new ArrayList<>();

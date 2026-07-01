@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import pe.edu.upeu.academia_api.dto.forum.ForumPageResponse;
 import pe.edu.upeu.academia_api.dto.forum.ForumPostRequest;
 import pe.edu.upeu.academia_api.dto.forum.ForumPostResponse;
+import pe.edu.upeu.academia_api.dto.forum.ForumStatsResponse;
 import pe.edu.upeu.academia_api.service.ForumService;
 
 import java.util.List;
@@ -34,16 +35,22 @@ public class ForumController {
             @RequestParam(required = false) String topicId,
             @RequestParam(required = false) String exerciseId,
             @RequestParam(required = false) String tag,
+            @RequestParam(defaultValue = "recent") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Authentication auth) {
         return ResponseEntity.ok(
-                forumService.findPage(topicId, exerciseId, tag, page, size, currentUserId(auth)));
+                forumService.findPage(topicId, exerciseId, tag, sort, page, size, currentUserId(auth)));
     }
 
     @GetMapping("/tags")
     public ResponseEntity<List<String>> listTags() {
         return ResponseEntity.ok(forumService.listTags());
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ForumStatsResponse> stats() {
+        return ResponseEntity.ok(forumService.stats());
     }
 
     @GetMapping("/{id}")
@@ -77,6 +84,20 @@ public class ForumController {
     public ResponseEntity<ForumPostResponse> toggleLike(@PathVariable UUID id, Authentication auth) {
         return ResponseEntity.ok(
                 forumService.toggleLike(id, UUID.fromString(auth.getName())));
+    }
+
+    @PostMapping("/{postId}/accept/{replyId}")
+    public ResponseEntity<ForumPostResponse> accept(
+            @PathVariable UUID postId, @PathVariable UUID replyId, Authentication auth) {
+        return ResponseEntity.ok(
+                forumService.acceptReply(postId, replyId, UUID.fromString(auth.getName())));
+    }
+
+    @DeleteMapping("/{postId}/accept")
+    public ResponseEntity<ForumPostResponse> unaccept(
+            @PathVariable UUID postId, Authentication auth) {
+        return ResponseEntity.ok(
+                forumService.unacceptReply(postId, UUID.fromString(auth.getName())));
     }
 
     private UUID currentUserId(Authentication auth) {

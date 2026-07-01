@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.academia_api.dto.forum.ForumPageResponse;
 import pe.edu.upeu.academia_api.dto.forum.ForumPostRequest;
 import pe.edu.upeu.academia_api.dto.forum.ForumPostResponse;
+import pe.edu.upeu.academia_api.dto.forum.ForumStatsResponse;
 import pe.edu.upeu.academia_api.entity.ForumLike;
 import pe.edu.upeu.academia_api.entity.ForumPost;
 import pe.edu.upeu.academia_api.entity.ForumTag;
@@ -48,20 +49,33 @@ public class ForumServiceImpl implements ForumService {
 
     @Override
     @Transactional(readOnly = true)
-    public ForumPageResponse findPage(String topicId, String exerciseId, String tag,
+    public ForumPageResponse findPage(String topicId, String exerciseId, String tag, String sort,
                                       int page, int size, UUID currentUserId) {
-        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1),
-                Sort.by(Sort.Direction.DESC, "createdAt"));
+        int pageIdx = Math.max(page, 0);
+        int pageSize = Math.max(size, 1);
+        String s = sort == null ? "recent" : sort.toLowerCase();
+
+        UUID topicUUID = topicId != null ? UUID.fromString(topicId) : null;
+        UUID exerciseUUID = exerciseId != null ? UUID.fromString(exerciseId) : null;
+
         Page<ForumPost> result;
         if (tag != null && !tag.isBlank()) {
+            Pageable pageable = PageRequest.of(pageIdx, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
             result = forumPostRepository.findByTagAndParentIsNull(tag.trim(), pageable);
-        } else if (topicId != null) {
-            result = forumPostRepository.findByTopicIdAndParentIsNull(UUID.fromString(topicId), pageable);
-        } else if (exerciseId != null) {
-            result = forumPostRepository.findByExerciseIdAndParentIsNull(UUID.fromString(exerciseId), pageable);
+        } else if ("liked".equals(s)) {
+            Pageable pageable = PageRequest.of(pageIdx, pageSize);
+            result = forumPostRepository.findOrderByLikes(topicUUID, exerciseUUID, pageable);
+        } else if ("unanswered".equals(s) || "solved".equals(s)) {
+            Pageable pageable = PageRequest.of(pageIdx, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+            result = forumPostRepository.findFiltered(topicUUID, exerciseUUID,
+                    "unanswered".equals(s), "solved".equals(s), pageable);
         } else {
-            result = forumPostRepository.findByParentIsNull(pageable);
+            Pageable pageable = PageRequest.of(pageIdx, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+            if (topicUUID != null) result = forumPostRepository.findByTopicIdAndParentIsNull(topicUUID, pageable);
+            else if (exerciseUUID != null) result = forumPostRepository.findByExerciseIdAndParentIsNull(exerciseUUID, pageable);
+            else result = forumPostRepository.findByParentIsNull(pageable);
         }
+
         List<ForumPost> posts = result.getContent();
         Set<UUID> liked = likedIds(currentUserId, collectIds(posts));
         List<ForumPostResponse> items = posts.stream().map(p -> toResponse(p, liked)).toList();
@@ -146,10 +160,59 @@ public class ForumServiceImpl implements ForumService {
     }
 
     @Override
+    @Transactional
+    public ForumPostResponse acceptReply(UUID postId, UUID replyId, UUID userId) {
+        ForumPost post = find(postId);
+        if (post.getUser() == null || !post.getUser().getId().equals(userId)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Solo el autor del post puede marcar la mejor respuesta");
+        }
+        ForumPost reply = find(replyId);
+        if (reply.getParent() == null || !reply.getParent().getId().equals(postId)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "La respuesta no pertenece a este post");
+        }
+        post.setAcceptedReply(reply);
+        ForumPost saved = forumPostRepository.save(post);
+        Set<UUID> liked = likedIds(userId, collectIds(List.of(saved)));
+        return toResponse(saved, liked);
+    }
+
+    @Override
+    @Transactional
+    public ForumPostResponse unacceptReply(UUID postId, UUID userId) {
+        ForumPost post = find(postId);
+        if (post.getUser() == null || !post.getUser().getId().equals(userId)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Solo el autor del post puede desmarcar la mejor respuesta");
+        }
+        post.setAcceptedReply(null);
+        ForumPost saved = forumPostRepository.save(post);
+        Set<UUID> liked = likedIds(userId, collectIds(List.of(saved)));
+        return toResponse(saved, liked);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<String> listTags() {
         return forumTagRepository.findAllByOrderByNameAsc().stream()
                 .map(ForumTag::getName).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ForumStatsResponse stats() {
+        long total = forumPostRepository.findByParentIsNullOrderByCreatedAtDesc().size();
+        long unanswered = forumPostRepository.countUnanswered();
+        List<Object[]> raw = forumPostRepository.topTagsRaw(PageRequest.of(0, 10));
+        List<ForumStatsResponse.TagCount> tags = raw.stream()
+                .map(row -> ForumStatsResponse.TagCount.builder()
+                        .name((String) row[0])
+                        .count(((Number) row[1]).longValue())
+                        .build())
+                .toList();
+        return ForumStatsResponse.builder()
+                .totalPosts(total)
+                .unanswered(unanswered)
+                .topTags(tags)
+                .build();
     }
 
     private Set<ForumTag> resolveTags(List<String> names) {
@@ -193,6 +256,13 @@ public class ForumServiceImpl implements ForumService {
     }
 
     private ForumPostResponse toResponse(ForumPost p, Set<UUID> liked) {
+        UUID acceptedId = p.getAcceptedReply() != null ? p.getAcceptedReply().getId() : null;
+        boolean isAccepted = p.getParent() != null && p.getParent().getAcceptedReply() != null
+                && p.getParent().getAcceptedReply().getId() != null
+                && p.getParent().getAcceptedReply().getId().equals(p.getId());
+        List<ForumPostResponse> replies = p.getReplies() != null
+                ? p.getReplies().stream().map(r -> toResponse(r, liked)).toList()
+                : List.of();
         return ForumPostResponse.builder()
                 .id(p.getId())
                 .title(p.getTitle())
@@ -204,9 +274,10 @@ public class ForumServiceImpl implements ForumService {
                 .topicId(p.getTopic() != null ? p.getTopic().getId() : null)
                 .exerciseId(p.getExercise() != null ? p.getExercise().getId() : null)
                 .parentId(p.getParent() != null ? p.getParent().getId() : null)
-                .replies(p.getReplies() != null
-                        ? p.getReplies().stream().map(r -> toResponse(r, liked)).toList()
-                        : List.of())
+                .replies(replies)
+                .replyCount(replies.size())
+                .acceptedReplyId(acceptedId)
+                .isAccepted(isAccepted)
                 .tags(p.getTags() != null
                         ? p.getTags().stream().map(ForumTag::getName).sorted().toList()
                         : List.of())

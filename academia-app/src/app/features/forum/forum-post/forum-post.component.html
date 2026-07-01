@@ -28,8 +28,17 @@
 
     <!-- VIEW MODE -->
     <ng-container *ngIf="!editing">
+      <div *ngIf="post.acceptedReplyId"
+        class="inline-flex items-center gap-1.5 mb-3 px-3 py-1 bg-green-100 text-green-700
+          rounded-full text-xs font-bold uppercase tracking-wide">
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        Pregunta resuelta
+      </div>
+
       <div class="flex items-start justify-between gap-3 mb-3">
-        <h1 *ngIf="post.title" class="text-xl font-bold text-gray-900 flex-1">{{ post.title }}</h1>
+        <h1 *ngIf="post.title" class="text-2xl font-bold text-gray-900 flex-1">{{ post.title }}</h1>
         <div *ngIf="isOwner(post.author.id)" class="flex items-center gap-2 shrink-0">
           <button (click)="startEdit()"
             class="text-xs text-blue-600 hover:text-blue-700 font-medium
@@ -140,13 +149,42 @@
     </div>
 
     <div class="space-y-3">
-      <div *ngFor="let reply of post.replies"
-        class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div *ngFor="let reply of sortedReplies"
+        class="rounded-xl border shadow-sm p-5 transition"
+        [class.bg-gradient-to-br]="isAcceptedReply(reply)"
+        [class.from-green-50]="isAcceptedReply(reply)"
+        [class.to-white]="isAcceptedReply(reply)"
+        [class.border-green-300]="isAcceptedReply(reply)"
+        [class.ring-2]="isAcceptedReply(reply)"
+        [class.ring-green-200]="isAcceptedReply(reply)"
+        [class.bg-white]="!isAcceptedReply(reply)"
+        [class.border-gray-100]="!isAcceptedReply(reply)">
+
+        <!-- Badge de mejor respuesta -->
+        <div *ngIf="isAcceptedReply(reply)"
+          class="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-green-200">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-green-600 text-white
+            rounded-full text-xs font-bold uppercase tracking-wide shadow-sm">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            Mejor respuesta
+          </div>
+          <button *ngIf="isPostAuthor()" type="button" (click)="unacceptReply()"
+            [disabled]="acceptingId === 'unset'"
+            class="text-xs text-gray-500 hover:text-gray-700 hover:underline">
+            Desmarcar
+          </button>
+        </div>
 
         <div class="flex items-center justify-between gap-2 mb-3">
           <div class="flex items-center gap-2 min-w-0">
-            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600
-              flex items-center justify-center text-white font-bold text-xs shrink-0">
+            <div class="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
+              [class.bg-gradient-to-br]="true"
+              [class.from-green-400]="isAcceptedReply(reply)"
+              [class.to-green-600]="isAcceptedReply(reply)"
+              [class.from-emerald-400]="!isAcceptedReply(reply)"
+              [class.to-emerald-600]="!isAcceptedReply(reply)">
               {{ reply.author.name.charAt(0).toUpperCase() }}
             </div>
             <span class="text-sm font-medium text-gray-700 truncate">{{ reply.author.name }}</span>
@@ -161,7 +199,9 @@
 
         <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{{ reply.content }}</p>
 
-        <div class="mt-3 pt-2 border-t border-gray-50">
+        <div class="mt-3 pt-2 border-t flex items-center justify-between gap-2"
+          [class.border-green-100]="isAcceptedReply(reply)"
+          [class.border-gray-50]="!isAcceptedReply(reply)">
           <button type="button" (click)="toggleLike(reply)" [disabled]="likingId === reply.id"
             class="flex items-center gap-1 text-xs text-gray-500 hover:text-pink-600 transition"
             [class.text-pink-600]="reply.likedByMe">
@@ -171,6 +211,17 @@
                 d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
             <span class="font-medium">{{ reply.likeCount }}</span>
+          </button>
+
+          <button *ngIf="isPostAuthor() && !isAcceptedReply(reply) && !post.acceptedReplyId"
+            type="button" (click)="acceptReply(reply)" [disabled]="acceptingId === reply.id"
+            class="text-xs font-medium px-3 py-1.5 rounded-md border transition
+              text-green-700 border-green-200 hover:bg-green-50 hover:border-green-300
+              disabled:opacity-50 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            {{ acceptingId === reply.id ? 'Marcando…' : 'Marcar como mejor respuesta' }}
           </button>
         </div>
 

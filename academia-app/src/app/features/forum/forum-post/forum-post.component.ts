@@ -15,6 +15,9 @@ interface Post {
   exerciseId: string | null;
   parentId: string | null;
   replies: Post[];
+  replyCount: number;
+  acceptedReplyId: string | null;
+  isAccepted: boolean;
   tags: string[];
   likeCount: number;
   likedByMe: boolean;
@@ -48,6 +51,7 @@ export class ForumPostComponent implements OnInit, OnDestroy {
 
   deleting = false;
   likingId: string | null = null;
+  acceptingId: string | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -195,6 +199,64 @@ export class ForumPostComponent implements OnInit, OnDestroy {
             : 'Error al eliminar. Intenta de nuevo.');
         },
       });
+  }
+
+  isPostAuthor(): boolean {
+    return this.isOwner(this.post?.author.id);
+  }
+
+  get sortedReplies(): Post[] {
+    if (!this.post) return [];
+    const replies = [...this.post.replies];
+    if (this.post.acceptedReplyId) {
+      const idx = replies.findIndex(r => r.id === this.post!.acceptedReplyId);
+      if (idx > 0) {
+        const [accepted] = replies.splice(idx, 1);
+        replies.unshift(accepted);
+      }
+    }
+    return replies;
+  }
+
+  acceptReply(reply: Post): void {
+    if (!this.post) return;
+    this.acceptingId = reply.id;
+    this.api.post<Post>(`forum/${this.post.id}/accept/${reply.id}`, {})
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updated) => {
+          if (this.post) this.post.acceptedReplyId = updated.acceptedReplyId;
+          this.acceptingId = null;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.acceptingId = null;
+          console.error('Error accepting reply:', err);
+          alert('No se pudo marcar la mejor respuesta.');
+        },
+      });
+  }
+
+  unacceptReply(): void {
+    if (!this.post) return;
+    this.acceptingId = 'unset';
+    this.api.delete<Post>(`forum/${this.post.id}/accept`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updated) => {
+          if (this.post) this.post.acceptedReplyId = updated.acceptedReplyId;
+          this.acceptingId = null;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.acceptingId = null;
+          console.error('Error unaccepting reply:', err);
+        },
+      });
+  }
+
+  isAcceptedReply(reply: Post): boolean {
+    return !!this.post?.acceptedReplyId && this.post.acceptedReplyId === reply.id;
   }
 
   toggleLike(target: Post): void {
