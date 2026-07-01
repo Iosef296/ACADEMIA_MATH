@@ -4,17 +4,20 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, Routes } from '@angular/router';
 import { ExerciseListComponent } from './exercise-list/exercise-list.component';
 import { ExerciseDetailComponent } from './exercise-detail/exercise-detail.component';
+import { ExerciseCreateComponent } from './exercise-create/exercise-create.component';
 import { FlashcardsComponent } from './flashcards/flashcards.component';
 import { SharedModule } from '../../shared/shared.module';
+import { EditorModule } from '../editor/editor.module';
 
 const routes: Routes = [
   { path: '', component: ExerciseListComponent },
   { path: 'flashcards', component: FlashcardsComponent },
+  { path: 'new', component: ExerciseCreateComponent },
   { path: ':id', component: ExerciseDetailComponent },
 ];
 
 @NgModule({
-  declarations: [ExerciseListComponent, ExerciseDetailComponent, FlashcardsComponent],
-  imports: [CommonModule, FormsModule, RouterModule.forChild(routes), SharedModule],
+  declarations: [ExerciseListComponent, ExerciseDetailComponent, FlashcardsComponent, ExerciseCreateComponent],
+  imports: [CommonModule, FormsModule, RouterModule.forChild(routes), SharedModule, EditorModule],
 })
 export class ExercisesModule {}

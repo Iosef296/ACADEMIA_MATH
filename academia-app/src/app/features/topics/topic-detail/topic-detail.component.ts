@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Subject, firstValueFrom } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -86,10 +86,6 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
   savingCurrent = false;
 
   // Exercise CRUD
-  showCreateEx = false;
-  createExForm = { title: '', contentLatex: '', difficulty: 'basic', isParametric: false, needsGraph: false, graphType: '' };
-  creatingEx = false;
-  createExVars: Array<{ varName: string; minVal: number | null; maxVal: number | null; stepVal: number | null; integerOnly: boolean }> = [];
   newVarName = '';
 
   showEditEx = false;
@@ -102,8 +98,6 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
   confirmDeleteExId: string | null = null;
   deletingExId: string | null = null;
 
-  ocrLoadingCreate = false;
-  ocrDragOverCreate = false;
   ocrLoadingEdit = false;
   ocrDragOverEdit = false;
 
@@ -132,6 +126,7 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private api: ApiService,
     private store: Store,
     private cdr: ChangeDetectorRef,
@@ -368,23 +363,20 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
 
   // ── Exercise CRUD ────────────────────────────────────
 
-  // ── OCR ─────────────────────────────────────────────
+  // ── OCR (edit modal only) ────────────────────────────
 
-  processOcr(file: File, target: 'create' | 'edit'): void {
-    if (target === 'create') this.ocrLoadingCreate = true;
-    else this.ocrLoadingEdit = true;
+  processOcrEdit(file: File): void {
+    this.ocrLoadingEdit = true;
     this.api.upload<{ latex: string; text: string }>('ocr/extract', file)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
-          const latex = res.latex ?? res.text ?? '';
-          if (target === 'create') { this.createExForm.contentLatex = latex; this.ocrLoadingCreate = false; }
-          else { this.editExForm.contentLatex = latex; this.ocrLoadingEdit = false; }
+          this.editExForm.contentLatex = res.latex ?? res.text ?? '';
+          this.ocrLoadingEdit = false;
           this.cdr.detectChanges();
         },
         error: () => {
-          if (target === 'create') this.ocrLoadingCreate = false;
-          else this.ocrLoadingEdit = false;
+          this.ocrLoadingEdit = false;
           this.error = 'Error al procesar imagen OCR.';
           setTimeout(() => (this.error = ''), 3000);
           this.cdr.detectChanges();
@@ -392,35 +384,16 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
       });
   }
 
-  onOcrFileCreate(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) this.processOcr(file, 'create');
-  }
-
   onOcrFileEdit(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) this.processOcr(file, 'edit');
-  }
-
-  onOcrDropCreate(event: DragEvent): void {
-    event.preventDefault(); this.ocrDragOverCreate = false;
-    const file = event.dataTransfer?.files[0];
-    if (file?.type.startsWith('image/')) this.processOcr(file, 'create');
+    if (file) this.processOcrEdit(file);
   }
 
   onOcrDropEdit(event: DragEvent): void {
     event.preventDefault(); this.ocrDragOverEdit = false;
     const file = event.dataTransfer?.files[0];
-    if (file?.type.startsWith('image/')) this.processOcr(file, 'edit');
+    if (file?.type.startsWith('image/')) this.processOcrEdit(file);
   }
-
-  addExVar(): void {
-    if (!this.newVarName.trim()) return;
-    this.createExVars.push({ varName: this.newVarName.trim(), minVal: 1, maxVal: 10, stepVal: null, integerOnly: true });
-    this.newVarName = '';
-  }
-
-  removeExVar(i: number): void { this.createExVars.splice(i, 1); }
 
   addEditExVar(): void {
     if (!this.editNewVarName.trim()) return;
@@ -430,48 +403,15 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
 
   removeEditExVar(i: number): void { this.editExVars.splice(i, 1); }
 
-  // ── Exercise CRUD ─────────────────────────────────
+  // ── Navigate to create exercise page ────────────────
 
-  createExercise(): void {
-    if (!this.createExForm.title.trim()) return;
-    this.creatingEx = true;
-    this.api.post<Exercise & { id: string }>('exercises', {
-      title: this.createExForm.title.trim(),
-      contentLatex: this.createExForm.contentLatex.trim() || ' ',
-      difficulty: this.createExForm.difficulty.toUpperCase(),
-      isParametric: this.createExForm.isParametric,
-      needsGraph: this.createExForm.needsGraph,
-      graphType: this.createExForm.graphType || null,
-      topicId: this.topicId,
-    }).pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (exercise) => {
-          const vars = [...this.createExVars];
-          const postVars = vars.map(v =>
-            firstValueFrom(this.api.post(`exercises/${exercise.id}/variables`, {
-              varName: v.varName, minVal: v.minVal, maxVal: v.maxVal,
-              stepVal: v.stepVal, integerOnly: v.integerOnly,
-              constraintType: null, constraintValue: null,
-            }))
-          );
-          Promise.allSettled(postVars).then(() => {
-            this.creatingEx = false;
-            this.showCreateEx = false;
-            this.createExForm = { title: '', contentLatex: '', difficulty: 'basic', isParametric: false, needsGraph: false, graphType: '' };
-            this.createExVars = [];
-            this.newVarName = '';
-            this.success = 'Ejercicio creado.';
-            setTimeout(() => (this.success = ''), 3000);
-            this.loadTopic();
-          });
-        },
-        error: () => {
-          this.creatingEx = false;
-          this.error = 'Error al crear ejercicio.';
-          setTimeout(() => (this.error = ''), 3000);
-        },
-      });
+  goToCreateExercise(): void {
+    this.router.navigate(['/exercises', 'new'], {
+      queryParams: { topicId: this.topicId, topicName: this.topic?.name ?? '' },
+    });
   }
+
+  // ── Exercise CRUD (edit/delete only) ────────────────
 
   startEditEx(ex: Exercise): void {
     this.editingEx = ex;
