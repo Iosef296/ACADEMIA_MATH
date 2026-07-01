@@ -95,11 +95,16 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.topicId = this.route.snapshot.paramMap.get('id') ?? '';
     this.store.select(selectUserRole).pipe(takeUntil(this.destroy$)).subscribe(role => {
       this.userRole = role;
     });
-    this.loadTopic();
+    this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      this.topicId = params.get('id') ?? '';
+      this.topic = null;
+      this.exercises = [];
+      this.progress = null;
+      this.loadTopic();
+    });
   }
 
   ngOnDestroy(): void {
