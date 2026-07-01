@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -15,6 +15,8 @@ interface Post {
   exerciseId: string | null;
   parentId: string | null;
   replies: Post[];
+  likeCount: number;
+  likedByMe: boolean;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -42,10 +44,14 @@ export class ForumPostComponent implements OnInit, OnDestroy {
   saving = false;
   editError = '';
 
+  deleting = false;
+  likingId: string | null = null;
+
   private destroy$ = new Subject<void>();
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private api: ApiService,
     private cdr: ChangeDetectorRef,
     private store: Store,
@@ -83,8 +89,8 @@ export class ForumPostComponent implements OnInit, OnDestroy {
       });
   }
 
-  isOwner(): boolean {
-    return !!this.currentUserId && this.post?.author.id === this.currentUserId;
+  isOwner(authorId?: string | null): boolean {
+    return !!this.currentUserId && !!authorId && authorId === this.currentUserId;
   }
 
   startEdit(): void {
@@ -130,6 +136,67 @@ export class ForumPostComponent implements OnInit, OnDestroy {
             ? 'Solo el autor puede editar este post.'
             : 'Error al guardar los cambios.';
           console.error('Error updating post:', err);
+        },
+      });
+  }
+
+  deletePost(): void {
+    if (!this.post) return;
+    if (!confirm('¿Eliminar esta publicación y todas sus respuestas? Esta acción no se puede deshacer.')) return;
+    this.deleting = true;
+    this.api.delete<void>(`forum/${this.post.id}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deleting = false;
+          this.router.navigate(['/forum']);
+        },
+        error: (err) => {
+          this.deleting = false;
+          console.error('Error deleting post:', err);
+          alert(err?.status === 403
+            ? 'Solo el autor puede eliminar este post.'
+            : 'Error al eliminar. Intenta de nuevo.');
+        },
+      });
+  }
+
+  deleteReply(reply: Post): void {
+    if (!this.post) return;
+    if (!confirm('¿Eliminar esta respuesta?')) return;
+    this.api.delete<void>(`forum/${reply.id}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          if (this.post) {
+            this.post.replies = this.post.replies.filter(r => r.id !== reply.id);
+            this.cdr.detectChanges();
+          }
+        },
+        error: (err) => {
+          console.error('Error deleting reply:', err);
+          alert(err?.status === 403
+            ? 'Solo el autor puede eliminar esta respuesta.'
+            : 'Error al eliminar. Intenta de nuevo.');
+        },
+      });
+  }
+
+  toggleLike(target: Post): void {
+    if (this.likingId) return;
+    this.likingId = target.id;
+    this.api.post<Post>(`forum/${target.id}/like`, {})
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updated) => {
+          target.likeCount = updated.likeCount;
+          target.likedByMe = updated.likedByMe;
+          this.likingId = null;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.likingId = null;
+          console.error('Error toggling like:', err);
         },
       });
   }

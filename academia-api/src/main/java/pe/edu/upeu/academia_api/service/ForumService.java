@@ -7,9 +7,10 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ForumService {
-    List<ForumPostResponse> findAll(String topicId, String exerciseId);
-    ForumPostResponse findById(UUID id);
+    List<ForumPostResponse> findAll(String topicId, String exerciseId, UUID currentUserId);
+    ForumPostResponse findById(UUID id, UUID currentUserId);
     ForumPostResponse create(ForumPostRequest request, UUID userId);
     ForumPostResponse update(UUID id, ForumPostRequest request, UUID userId);
-    void delete(UUID id);
+    void delete(UUID id, UUID userId);
+    ForumPostResponse toggleLike(UUID postId, UUID userId);
 }

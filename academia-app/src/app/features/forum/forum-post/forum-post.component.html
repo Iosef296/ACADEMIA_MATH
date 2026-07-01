@@ -30,11 +30,18 @@
     <ng-container *ngIf="!editing">
       <div class="flex items-start justify-between gap-3 mb-3">
         <h1 *ngIf="post.title" class="text-xl font-bold text-gray-900 flex-1">{{ post.title }}</h1>
-        <button *ngIf="isOwner()" (click)="startEdit()"
-          class="shrink-0 text-xs text-blue-600 hover:text-blue-700 font-medium
-            px-2.5 py-1 rounded-md hover:bg-blue-50 transition">
-          Editar
-        </button>
+        <div *ngIf="isOwner(post.author.id)" class="flex items-center gap-2 shrink-0">
+          <button (click)="startEdit()"
+            class="text-xs text-blue-600 hover:text-blue-700 font-medium
+              px-2.5 py-1 rounded-md hover:bg-blue-50 transition">
+            Editar
+          </button>
+          <button (click)="deletePost()" [disabled]="deleting"
+            class="text-xs text-red-600 hover:text-red-700 font-medium
+              px-2.5 py-1 rounded-md hover:bg-red-50 transition disabled:opacity-50">
+            {{ deleting ? 'Eliminando…' : 'Eliminar' }}
+          </button>
+        </div>
       </div>
 
       <div class="flex items-center gap-3 mb-4 flex-wrap">
@@ -51,6 +58,20 @@
       </div>
 
       <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{{ post.content }}</p>
+
+      <div class="mt-4 pt-3 border-t border-gray-100">
+        <button type="button" (click)="toggleLike(post)" [disabled]="likingId === post.id"
+          class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-pink-600 transition"
+          [class.text-pink-600]="post.likedByMe">
+          <svg class="w-5 h-5" [attr.fill]="post.likedByMe ? 'currentColor' : 'none'"
+            stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+          <span class="font-medium">{{ post.likeCount }}</span>
+          <span class="text-xs">{{ post.likedByMe ? 'Te gusta' : 'Me gusta' }}</span>
+        </button>
+      </div>
     </ng-container>
 
     <!-- EDIT MODE -->
@@ -106,17 +127,36 @@
       <div *ngFor="let reply of post.replies"
         class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
 
-        <div class="flex items-center gap-2 mb-3">
-          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600
-            flex items-center justify-center text-white font-bold text-xs shrink-0">
-            {{ reply.author.name.charAt(0).toUpperCase() }}
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600
+              flex items-center justify-center text-white font-bold text-xs shrink-0">
+              {{ reply.author.name.charAt(0).toUpperCase() }}
+            </div>
+            <span class="text-sm font-medium text-gray-700 truncate">{{ reply.author.name }}</span>
+            <span class="text-gray-300">·</span>
+            <span class="text-xs text-gray-400">{{ timeAgo(reply.createdAt) }}</span>
           </div>
-          <span class="text-sm font-medium text-gray-700">{{ reply.author.name }}</span>
-          <span class="text-gray-300">·</span>
-          <span class="text-xs text-gray-400">{{ timeAgo(reply.createdAt) }}</span>
+          <button *ngIf="isOwner(reply.author.id)" (click)="deleteReply(reply)"
+            class="text-xs text-red-500 hover:text-red-700 hover:underline shrink-0">
+            Eliminar
+          </button>
         </div>
 
         <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{{ reply.content }}</p>
+
+        <div class="mt-3 pt-2 border-t border-gray-50">
+          <button type="button" (click)="toggleLike(reply)" [disabled]="likingId === reply.id"
+            class="flex items-center gap-1 text-xs text-gray-500 hover:text-pink-600 transition"
+            [class.text-pink-600]="reply.likedByMe">
+            <svg class="w-4 h-4" [attr.fill]="reply.likedByMe ? 'currentColor' : 'none'"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            <span class="font-medium">{{ reply.likeCount }}</span>
+          </button>
+        </div>
 
       </div>
     </div>

@@ -23,13 +23,14 @@ public class ForumController {
     @GetMapping
     public ResponseEntity<List<ForumPostResponse>> findAll(
             @RequestParam(required = false) String topicId,
-            @RequestParam(required = false) String exerciseId) {
-        return ResponseEntity.ok(forumService.findAll(topicId, exerciseId));
+            @RequestParam(required = false) String exerciseId,
+            Authentication auth) {
+        return ResponseEntity.ok(forumService.findAll(topicId, exerciseId, currentUserId(auth)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ForumPostResponse> findById(@PathVariable UUID id) {
-        return ResponseEntity.ok(forumService.findById(id));
+    public ResponseEntity<ForumPostResponse> findById(@PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(forumService.findById(id, currentUserId(auth)));
     }
 
     @PostMapping
@@ -49,8 +50,22 @@ public class ForumController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        forumService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication auth) {
+        forumService.delete(id, UUID.fromString(auth.getName()));
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/like")
+    public ResponseEntity<ForumPostResponse> toggleLike(@PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(
+                forumService.toggleLike(id, UUID.fromString(auth.getName())));
+    }
+
+    private UUID currentUserId(Authentication auth) {
+        try {
+            return auth != null ? UUID.fromString(auth.getName()) : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
