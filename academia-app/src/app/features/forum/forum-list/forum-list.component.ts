@@ -15,9 +15,18 @@ interface ForumPost {
   exerciseId: string | null;
   parentId: string | null;
   replies: ForumPost[];
+  tags: string[];
   likeCount: number;
   likedByMe: boolean;
   createdAt: string;
+}
+
+interface PageResp {
+  items: ForumPost[];
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
 }
 
 @Component({
@@ -28,12 +37,22 @@ interface ForumPost {
 export class ForumListComponent implements OnInit, OnDestroy {
   posts: ForumPost[] = [];
   loading = false;
+  loadingMore = false;
   searchQuery = '';
   topicFilter: string | null = null;
+  tagFilter: string | null = null;
+
+  page = 0;
+  size = 10;
+  totalPages = 0;
+  totalElements = 0;
+
+  availableTags: string[] = [];
 
   showNewPost = false;
   newTitle = '';
   newBody = '';
+  newTagsInput = '';
   saving = false;
   error = '';
 
@@ -56,12 +75,15 @@ export class ForumListComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(u => this.currentUserId = u?.id ?? null);
 
+    this.loadTags();
+
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (params) => {
           this.topicFilter = params['topicId'] ? String(params['topicId']) : null;
-          this.load();
+          this.tagFilter = params['tag'] ? String(params['tag']) : null;
+          this.reload();
         },
         error: (err) => console.error('Error reading query params:', err),
       });
@@ -72,23 +94,70 @@ export class ForumListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  loadTags(): void {
+    this.api.get<string[]>('forum/tags')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => { this.availableTags = data ?? []; this.cdr.detectChanges(); },
+        error: (err) => console.error('Error loading tags:', err),
+      });
+  }
+
+  reload(): void {
+    this.page = 0;
+    this.posts = [];
+    this.load();
+  }
+
+  private buildParams(): Record<string, string> {
+    const p: Record<string, string> = {
+      page: String(this.page),
+      size: String(this.size),
+    };
+    if (this.topicFilter) p['topicId'] = this.topicFilter;
+    if (this.tagFilter) p['tag'] = this.tagFilter;
+    return p;
+  }
+
   load(): void {
-    this.loading = true;
-    const query = this.topicFilter ? `?topicId=${this.topicFilter}` : '';
-    this.api.get<ForumPost[]>(`forum${query}`)
+    const first = this.page === 0;
+    if (first) this.loading = true; else this.loadingMore = true;
+    this.api.get<PageResp>('forum/page', this.buildParams())
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
-          this.posts = data ?? [];
+          if (first) this.posts = data.items ?? [];
+          else this.posts = [...this.posts, ...(data.items ?? [])];
+          this.totalPages = data.totalPages;
+          this.totalElements = data.totalElements;
           this.loading = false;
+          this.loadingMore = false;
           this.cdr.detectChanges();
         },
         error: (err) => {
           this.loading = false;
+          this.loadingMore = false;
           this.cdr.detectChanges();
           console.error('Error loading forum posts:', err);
         },
       });
+  }
+
+  loadMore(): void {
+    if (this.loadingMore || this.page + 1 >= this.totalPages) return;
+    this.page++;
+    this.load();
+  }
+
+  get hasMore(): boolean {
+    return this.page + 1 < this.totalPages;
+  }
+
+  selectTag(tag: string | null): void {
+    this.router.navigate([], {
+      queryParams: { tag: tag ?? null, topicId: this.topicFilter ?? null },
+      queryParamsHandling: 'merge',
+    });
   }
 
   get filtered(): ForumPost[] {
@@ -98,7 +167,8 @@ export class ForumListComponent implements OnInit, OnDestroy {
       (p) =>
         (p.title ?? '').toLowerCase().includes(q) ||
         p.content.toLowerCase().includes(q) ||
-        p.author.name.toLowerCase().includes(q)
+        p.author.name.toLowerCase().includes(q) ||
+        (p.tags ?? []).some(t => t.toLowerCase().includes(q))
     );
   }
 
@@ -154,6 +224,18 @@ export class ForumListComponent implements OnInit, OnDestroy {
       });
   }
 
+  onTagChipClick(event: Event, tag: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.selectTag(tag);
+  }
+
+  private parseTags(input: string): string[] {
+    return input.split(',')
+      .map(s => s.trim().toLowerCase())
+      .filter(s => s.length > 0 && s.length <= 50);
+  }
+
   createPost(): void {
     if (!this.newTitle.trim() || !this.newBody.trim()) {
       this.error = 'El título y el contenido son obligatorios.';
@@ -166,6 +248,7 @@ export class ForumListComponent implements OnInit, OnDestroy {
         title: this.newTitle.trim(),
         content: this.newBody.trim(),
         topicId: this.topicFilter,
+        tags: this.parseTags(this.newTagsInput),
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -174,6 +257,8 @@ export class ForumListComponent implements OnInit, OnDestroy {
           this.showNewPost = false;
           this.newTitle = '';
           this.newBody = '';
+          this.newTagsInput = '';
+          this.loadTags();
           this.router.navigate(['/forum', res.id]);
         },
         error: (err) => {

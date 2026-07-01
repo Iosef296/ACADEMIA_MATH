@@ -15,6 +15,7 @@ interface Post {
   exerciseId: string | null;
   parentId: string | null;
   replies: Post[];
+  tags: string[];
   likeCount: number;
   likedByMe: boolean;
   createdAt: string;
@@ -41,6 +42,7 @@ export class ForumPostComponent implements OnInit, OnDestroy {
   editing = false;
   editTitle = '';
   editContent = '';
+  editTagsInput = '';
   saving = false;
   editError = '';
 
@@ -98,7 +100,18 @@ export class ForumPostComponent implements OnInit, OnDestroy {
     this.editing = true;
     this.editTitle = this.post.title ?? '';
     this.editContent = this.post.content;
+    this.editTagsInput = (this.post.tags ?? []).join(', ');
     this.editError = '';
+  }
+
+  goToTag(tag: string): void {
+    this.router.navigate(['/forum'], { queryParams: { tag } });
+  }
+
+  private parseTags(input: string): string[] {
+    return input.split(',')
+      .map(s => s.trim().toLowerCase())
+      .filter(s => s.length > 0 && s.length <= 50);
   }
 
   cancelEdit(): void {
@@ -117,6 +130,7 @@ export class ForumPostComponent implements OnInit, OnDestroy {
       .put<Post>(`forum/${this.post.id}`, {
         title: this.editTitle.trim() || null,
         content: this.editContent.trim(),
+        tags: this.parseTags(this.editTagsInput),
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -124,6 +138,7 @@ export class ForumPostComponent implements OnInit, OnDestroy {
           if (this.post) {
             this.post.title = updated.title;
             this.post.content = updated.content;
+            this.post.tags = updated.tags ?? [];
             this.post.updatedAt = updated.updatedAt;
           }
           this.editing = false;

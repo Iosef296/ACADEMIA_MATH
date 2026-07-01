@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import pe.edu.upeu.academia_api.dto.forum.ForumPageResponse;
 import pe.edu.upeu.academia_api.dto.forum.ForumPostRequest;
 import pe.edu.upeu.academia_api.dto.forum.ForumPostResponse;
 import pe.edu.upeu.academia_api.service.ForumService;
@@ -26,6 +27,23 @@ public class ForumController {
             @RequestParam(required = false) String exerciseId,
             Authentication auth) {
         return ResponseEntity.ok(forumService.findAll(topicId, exerciseId, currentUserId(auth)));
+    }
+
+    @GetMapping("/page")
+    public ResponseEntity<ForumPageResponse> findPage(
+            @RequestParam(required = false) String topicId,
+            @RequestParam(required = false) String exerciseId,
+            @RequestParam(required = false) String tag,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Authentication auth) {
+        return ResponseEntity.ok(
+                forumService.findPage(topicId, exerciseId, tag, page, size, currentUserId(auth)));
+    }
+
+    @GetMapping("/tags")
+    public ResponseEntity<List<String>> listTags() {
+        return ResponseEntity.ok(forumService.listTags());
     }
 
     @GetMapping("/{id}")

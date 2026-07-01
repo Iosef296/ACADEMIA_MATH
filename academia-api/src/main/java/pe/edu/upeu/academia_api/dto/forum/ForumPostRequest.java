@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -16,4 +17,5 @@ public class ForumPostRequest {
     private UUID topicId;
     private UUID exerciseId;
     private UUID parentId;
+    private List<String> tags;
 }

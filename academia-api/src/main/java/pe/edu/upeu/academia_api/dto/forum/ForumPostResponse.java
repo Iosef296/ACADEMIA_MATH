@@ -19,6 +19,7 @@ public class ForumPostResponse {
     private UUID exerciseId;
     private UUID parentId;
     private List<ForumPostResponse> replies;
+    private List<String> tags;
     private long likeCount;
     private boolean likedByMe;
     private LocalDateTime createdAt;
