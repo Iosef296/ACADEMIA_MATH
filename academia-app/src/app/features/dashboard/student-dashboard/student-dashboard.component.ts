@@ -68,8 +68,13 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   ];
   selectedMood: string | null = null;
   moodSaved = false;
-  showMoodModal = localStorage.getItem('moodAnsweredDate') !== new Date().toDateString();
+  showMoodModal = false;
+  currentUserId = '';
   Math = Math;
+
+  private moodKey(userId: string): string {
+    return `moodAnsweredDate_${userId}`;
+  }
 
   private destroy$ = new Subject<void>();
   private prevLevel = 0;
@@ -79,7 +84,11 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.user$ = this.store.select(selectCurrentUser);
     this.user$.pipe(takeUntil(this.destroy$)).subscribe(user => {
-      if (user) this.loadDashboard();
+      if (user) {
+        this.currentUserId = user.id;
+        this.showMoodModal = localStorage.getItem(this.moodKey(user.id)) !== new Date().toDateString();
+        this.loadDashboard();
+      }
     });
   }
 
@@ -146,7 +155,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
     this.selectedMood = mood;
     this.moodSaved = true;
     this.showMoodModal = false;
-    localStorage.setItem('moodAnsweredDate', new Date().toDateString());
+    localStorage.setItem(this.moodKey(this.currentUserId), new Date().toDateString());
     const difficulty = this.moods.find(m => m.value === mood)?.difficulty ?? 'intermediate';
     localStorage.setItem('exerciseDifficulty', difficulty);
     this.api.post('mood', { mood }).pipe(takeUntil(this.destroy$)).subscribe({ error: () => {} });
@@ -155,7 +164,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
 
   closeMoodModal(): void {
     this.showMoodModal = false;
-    localStorage.setItem('moodAnsweredDate', new Date().toDateString());
+    localStorage.setItem(this.moodKey(this.currentUserId), new Date().toDateString());
   }
 
   get topTopics(): ProgressSummary[] {
