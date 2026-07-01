@@ -77,18 +77,34 @@
         </button>
       </div>
 
-      <div class="mt-4 pt-3 border-t border-gray-100">
-        <button type="button" (click)="toggleLike(post)" [disabled]="likingId === post.id"
-          class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-pink-600 transition"
-          [class.text-pink-600]="post.likedByMe">
-          <svg class="w-5 h-5" [attr.fill]="post.likedByMe ? 'currentColor' : 'none'"
-            stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-          <span class="font-medium">{{ post.likeCount }}</span>
-          <span class="text-xs">{{ post.likedByMe ? 'Te gusta' : 'Me gusta' }}</span>
-        </button>
+      <div class="mt-4 pt-3 border-t border-gray-100 relative">
+        <div class="flex items-center gap-2 flex-wrap">
+          <div class="relative">
+            <button type="button" (click)="toggleReactionMenuFor(post.id)"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 border border-gray-200
+                rounded-full hover:bg-gray-50 hover:border-blue-300 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Reaccionar
+            </button>
+            <div *ngIf="openReactionFor === post.id"
+              class="absolute left-0 top-full mt-1 bg-white shadow-lg border border-gray-200
+                rounded-full px-2 py-1 flex items-center gap-1 z-10">
+              <button *ngFor="let e of reactionEmojis" type="button" (click)="reactToPost(post, e)"
+                class="text-xl hover:scale-125 transition transform p-1">{{ e }}</button>
+            </div>
+          </div>
+          <button *ngFor="let r of post.reactions" type="button" (click)="reactToPost(post, r.emoji)"
+            class="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm border transition"
+            [class.bg-blue-100]="r.mine" [class.border-blue-300]="r.mine"
+            [class.bg-white]="!r.mine" [class.border-gray-200]="!r.mine"
+            [class.hover:bg-blue-50]="!r.mine">
+            <span>{{ r.emoji }}</span>
+            <span class="font-semibold text-gray-700">{{ r.count }}</span>
+          </button>
+        </div>
       </div>
     </ng-container>
 
@@ -236,19 +252,35 @@
             [innerHTML]="reply.content | forumMarkdown"></div>
         </ng-template>
 
-        <div class="mt-3 pt-2 border-t flex items-center justify-between gap-2"
+        <div class="mt-3 pt-2 border-t flex items-center justify-between gap-2 flex-wrap relative"
           [class.border-green-100]="isAcceptedReply(reply)"
           [class.border-gray-50]="!isAcceptedReply(reply)">
-          <button type="button" (click)="toggleLike(reply)" [disabled]="likingId === reply.id"
-            class="flex items-center gap-1 text-xs text-gray-500 hover:text-pink-600 transition"
-            [class.text-pink-600]="reply.likedByMe">
-            <svg class="w-4 h-4" [attr.fill]="reply.likedByMe ? 'currentColor' : 'none'"
-              stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-            <span class="font-medium">{{ reply.likeCount }}</span>
-          </button>
+          <div class="flex items-center gap-1 flex-wrap">
+            <div class="relative">
+              <button type="button" (click)="toggleReactionMenuFor(reply.id)"
+                class="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 border border-gray-200
+                  rounded-full hover:bg-gray-50 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Reaccionar
+              </button>
+              <div *ngIf="openReactionFor === reply.id"
+                class="absolute left-0 top-full mt-1 bg-white shadow-lg border border-gray-200
+                  rounded-full px-2 py-1 flex items-center gap-1 z-10">
+                <button *ngFor="let e of reactionEmojis" type="button" (click)="reactToPost(reply, e)"
+                  class="text-lg hover:scale-125 transition transform p-1">{{ e }}</button>
+              </div>
+            </div>
+            <button *ngFor="let r of reply.reactions" type="button" (click)="reactToPost(reply, r.emoji)"
+              class="flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition"
+              [class.bg-blue-100]="r.mine" [class.border-blue-300]="r.mine"
+              [class.bg-white]="!r.mine" [class.border-gray-200]="!r.mine">
+              <span>{{ r.emoji }}</span>
+              <span class="font-semibold text-gray-700">{{ r.count }}</span>
+            </button>
+          </div>
 
           <button *ngIf="isPostAuthor() && !isAcceptedReply(reply) && !post.acceptedReplyId"
             type="button" (click)="acceptReply(reply)" [disabled]="acceptingId === reply.id"
@@ -293,27 +325,15 @@
     <div *ngIf="replyError" class="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
       {{ replyError }}
     </div>
+    <div *ngIf="ocrError" class="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+      {{ ocrError }}
+    </div>
 
     <!-- MODO SIMPLE -->
-    <div *ngIf="replyMode === 'simple'">
-      <div class="flex items-center gap-1 mb-1 border border-gray-200 border-b-0 rounded-t-lg
-        bg-gray-50 px-2 py-1.5 text-xs text-gray-500">
-        <button type="button" (click)="applyFormat('body', 'bold')" title="Negrita"
-          class="px-2 py-0.5 rounded hover:bg-gray-200 font-bold">B</button>
-        <button type="button" (click)="applyFormat('body', 'italic')" title="Itálica"
-          class="px-2 py-0.5 rounded hover:bg-gray-200 italic">I</button>
-        <button type="button" (click)="applyFormat('body', 'code')" title="Código inline"
-          class="px-2 py-0.5 rounded hover:bg-gray-200 font-mono">‹›</button>
-        <button type="button" (click)="applyFormat('body', 'codeblock')" title="Bloque de código"
-          class="px-2 py-0.5 rounded hover:bg-gray-200 font-mono">{{ '{ }' }}</button>
-        <button type="button" (click)="applyFormat('body', 'list')" title="Lista"
-          class="px-2 py-0.5 rounded hover:bg-gray-200">• —</button>
-        <span class="ml-auto text-[10px] text-gray-400">Markdown básico soportado</span>
-      </div>
-      <textarea [(ngModel)]="replyBody" rows="5"
-        placeholder="Escribe tu respuesta... usa **negrita**, *itálica*, `código`"
-        class="w-full px-4 py-3 border border-gray-200 rounded-b-lg text-sm resize-none
-          focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"></textarea>
+    <div *ngIf="replyMode === 'simple'" class="mb-3">
+      <app-forum-rich-editor [value]="replyBody" (valueChange)="onReplyBodyChange($event)"
+        [rows]="5" placeholder="Escribe tu respuesta. Markdown + LaTeX + OCR (arrastra imagen).">
+      </app-forum-rich-editor>
     </div>
 
     <!-- MODO PASOS -->
@@ -341,26 +361,14 @@
             </button>
           </div>
         </div>
-        <input [(ngModel)]="step.title" type="text" placeholder="Título del paso (opcional)"
+        <input [(ngModel)]="step.title" (ngModelChange)="saveDraft()" type="text"
+          placeholder="Título del paso (opcional)"
           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm mb-2 bg-white
             focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <div class="flex items-center gap-1 mb-0 border border-gray-200 border-b-0 rounded-t-lg
-          bg-white px-2 py-1.5 text-xs text-gray-500">
-          <button type="button" (click)="applyFormat(i, 'bold')"
-            class="px-2 py-0.5 rounded hover:bg-gray-100 font-bold">B</button>
-          <button type="button" (click)="applyFormat(i, 'italic')"
-            class="px-2 py-0.5 rounded hover:bg-gray-100 italic">I</button>
-          <button type="button" (click)="applyFormat(i, 'code')"
-            class="px-2 py-0.5 rounded hover:bg-gray-100 font-mono">‹›</button>
-          <button type="button" (click)="applyFormat(i, 'codeblock')"
-            class="px-2 py-0.5 rounded hover:bg-gray-100 font-mono">{{ '{ }' }}</button>
-          <button type="button" (click)="applyFormat(i, 'list')"
-            class="px-2 py-0.5 rounded hover:bg-gray-100">• —</button>
-        </div>
-        <textarea [(ngModel)]="step.content" rows="3"
-          placeholder="Explica este paso..."
-          class="w-full px-3 py-2 border border-gray-200 rounded-b-lg text-sm resize-none bg-white
-            focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        <app-forum-rich-editor [value]="step.content"
+          (valueChange)="onStepContentChange(i, $event)"
+          [rows]="3" placeholder="Explica este paso...">
+        </app-forum-rich-editor>
       </div>
 
       <button type="button" (click)="addStep()"
@@ -374,7 +382,14 @@
       </button>
     </div>
 
-    <div class="flex justify-end">
+    <div class="flex items-center justify-between gap-3">
+      <span class="text-xs text-gray-400 italic flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M5 13l4 4L19 7"/>
+        </svg>
+        Borrador guardado automáticamente
+      </span>
       <button (click)="sendReply()" [disabled]="replying"
         class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400
           disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5

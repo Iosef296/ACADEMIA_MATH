@@ -86,6 +86,15 @@ public class ForumController {
                 forumService.toggleLike(id, UUID.fromString(auth.getName())));
     }
 
+    @PostMapping("/{id}/react")
+    public ResponseEntity<ForumPostResponse> react(
+            @PathVariable UUID id,
+            @RequestBody java.util.Map<String, String> body,
+            Authentication auth) {
+        return ResponseEntity.ok(forumService.toggleReaction(
+                id, UUID.fromString(auth.getName()), body.get("emoji")));
+    }
+
     @PostMapping("/{postId}/accept/{replyId}")
     public ResponseEntity<ForumPostResponse> accept(
             @PathVariable UUID postId, @PathVariable UUID replyId, Authentication auth) {

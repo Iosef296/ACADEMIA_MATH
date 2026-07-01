@@ -17,6 +17,7 @@ public interface ForumService {
     ForumPostResponse update(UUID id, ForumPostRequest request, UUID userId);
     void delete(UUID id, UUID userId);
     ForumPostResponse toggleLike(UUID postId, UUID userId);
+    ForumPostResponse toggleReaction(UUID postId, UUID userId, String emoji);
     ForumPostResponse acceptReply(UUID postId, UUID replyId, UUID userId);
     ForumPostResponse unacceptReply(UUID postId, UUID userId);
     List<String> listTags();

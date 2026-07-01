@@ -1,0 +1,59 @@
+<div class="border border-gray-200 rounded-lg overflow-hidden bg-white">
+  <!-- Toolbar -->
+  <div class="flex items-center gap-1 bg-gray-50 border-b border-gray-200 px-2 py-1.5 text-xs text-gray-600">
+    <button type="button" (click)="apply('bold')" title="Negrita"
+      class="px-2 py-0.5 rounded hover:bg-gray-200 font-bold">B</button>
+    <button type="button" (click)="apply('italic')" title="Itálica"
+      class="px-2 py-0.5 rounded hover:bg-gray-200 italic">I</button>
+    <button type="button" (click)="apply('code')" title="Código inline"
+      class="px-2 py-0.5 rounded hover:bg-gray-200 font-mono">‹›</button>
+    <button type="button" (click)="apply('codeblock')" title="Bloque de código"
+      class="px-2 py-0.5 rounded hover:bg-gray-200 font-mono">{{ '{ }' }}</button>
+    <button type="button" (click)="apply('list')" title="Lista"
+      class="px-2 py-0.5 rounded hover:bg-gray-200">• —</button>
+    <button type="button" (click)="apply('math')" title="Fórmula matemática ($...$)"
+      class="px-2 py-0.5 rounded hover:bg-gray-200 font-serif italic">Σ</button>
+    <label class="px-2 py-0.5 rounded hover:bg-blue-100 text-blue-600 font-medium cursor-pointer flex items-center gap-1"
+      title="Subir imagen (OCR)"
+      [class.opacity-50]="ocrLoading" [class.cursor-wait]="ocrLoading">
+      <svg *ngIf="!ocrLoading" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      <svg *ngIf="ocrLoading" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      OCR
+      <input type="file" accept="image/*" class="hidden" (change)="onFileChange($event)" [disabled]="ocrLoading" />
+    </label>
+    <span class="ml-auto text-[10px] text-gray-400">Markdown + LaTeX · Arrastra imagen</span>
+  </div>
+
+  <!-- Split editor + preview -->
+  <div class="grid" [class.grid-cols-1]="!showPreview" [class.md:grid-cols-2]="showPreview">
+    <div class="relative" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+      <textarea #ta [ngModel]="value" (ngModelChange)="onInput($event)"
+        [rows]="rows" [placeholder]="placeholder"
+        class="w-full px-3 py-2.5 text-sm resize-none focus:outline-none border-0"
+        [class.md:border-r]="showPreview"
+        [class.border-gray-200]="showPreview"></textarea>
+      <div *ngIf="dragOver"
+        class="absolute inset-0 bg-blue-50/90 border-2 border-dashed border-blue-400
+          flex items-center justify-center text-blue-700 text-sm font-medium pointer-events-none">
+        📷 Suelta la imagen para procesar con OCR
+      </div>
+    </div>
+    <div *ngIf="showPreview"
+      class="px-3 py-2.5 text-sm bg-gray-50 max-h-[400px] overflow-auto min-h-[100px]">
+      <div *ngIf="!value?.trim()" class="text-xs text-gray-400 italic">Preview…</div>
+      <div *ngIf="value?.trim()" class="prose prose-sm max-w-none text-gray-700"
+        [innerHTML]="value | forumMarkdown"></div>
+    </div>
+  </div>
+
+  <div *ngIf="ocrError" class="px-3 py-1.5 bg-amber-50 border-t border-amber-200 text-xs text-amber-800">
+    {{ ocrError }}
+  </div>
+</div>

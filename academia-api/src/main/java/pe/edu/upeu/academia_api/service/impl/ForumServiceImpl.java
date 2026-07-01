@@ -15,6 +15,7 @@ import pe.edu.upeu.academia_api.dto.forum.ForumStatsResponse;
 import pe.edu.upeu.academia_api.dto.forum.ForumStepDto;
 import pe.edu.upeu.academia_api.entity.ForumLike;
 import pe.edu.upeu.academia_api.entity.ForumPost;
+import pe.edu.upeu.academia_api.entity.ForumReaction;
 import pe.edu.upeu.academia_api.entity.ForumReplyStep;
 import pe.edu.upeu.academia_api.entity.ForumTag;
 import pe.edu.upeu.academia_api.exception.AppException;
@@ -29,7 +30,10 @@ public class ForumServiceImpl implements ForumService {
 
     private final ForumPostRepository forumPostRepository;
     private final ForumLikeRepository forumLikeRepository;
+    private final ForumReactionRepository forumReactionRepository;
     private final ForumTagRepository forumTagRepository;
+
+    private static final Set<String> ALLOWED_EMOJIS = Set.of("👍","❤️","🎉","🤔","✅");
     private final UserRepository userRepository;
     private final TopicRepository topicRepository;
     private final ExerciseRepository exerciseRepository;
@@ -46,7 +50,7 @@ public class ForumServiceImpl implements ForumService {
             posts = forumPostRepository.findByParentIsNullOrderByCreatedAtDesc();
         }
         Set<UUID> liked = likedIds(currentUserId, collectIds(posts));
-        return posts.stream().map(p -> toResponse(p, liked)).toList();
+        return posts.stream().map(p -> toResponse(p, liked, currentUserId)).toList();
     }
 
     @Override
@@ -80,7 +84,7 @@ public class ForumServiceImpl implements ForumService {
 
         List<ForumPost> posts = result.getContent();
         Set<UUID> liked = likedIds(currentUserId, collectIds(posts));
-        List<ForumPostResponse> items = posts.stream().map(p -> toResponse(p, liked)).toList();
+        List<ForumPostResponse> items = posts.stream().map(p -> toResponse(p, liked, currentUserId)).toList();
         return ForumPageResponse.builder()
                 .items(items)
                 .page(result.getNumber())
@@ -95,7 +99,7 @@ public class ForumServiceImpl implements ForumService {
     public ForumPostResponse findById(UUID id, UUID currentUserId) {
         ForumPost post = find(id);
         Set<UUID> liked = likedIds(currentUserId, collectIds(List.of(post)));
-        return toResponse(post, liked);
+        return toResponse(post, liked, currentUserId);
     }
 
     @Override
@@ -123,7 +127,7 @@ public class ForumServiceImpl implements ForumService {
         }
         post.setTags(resolveTags(request.getTags()));
         applySteps(post, request.getSteps());
-        return toResponse(forumPostRepository.save(post), Set.of());
+        return toResponse(forumPostRepository.save(post), Set.of(), userId);
     }
 
     @Override
@@ -145,7 +149,7 @@ public class ForumServiceImpl implements ForumService {
         }
         ForumPost saved = forumPostRepository.save(post);
         Set<UUID> liked = likedIds(userId, collectIds(List.of(saved)));
-        return toResponse(saved, liked);
+        return toResponse(saved, liked, userId);
     }
 
     @Override
@@ -168,7 +172,24 @@ public class ForumServiceImpl implements ForumService {
             forumLikeRepository.save(ForumLike.builder().postId(postId).userId(userId).build());
         }
         Set<UUID> liked = likedIds(userId, collectIds(List.of(post)));
-        return toResponse(post, liked);
+        return toResponse(post, liked, userId);
+    }
+
+    @Override
+    @Transactional
+    public ForumPostResponse toggleReaction(UUID postId, UUID userId, String emoji) {
+        if (emoji == null || !ALLOWED_EMOJIS.contains(emoji)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Emoji no permitido");
+        }
+        ForumPost post = find(postId);
+        if (forumReactionRepository.existsByPostIdAndUserIdAndEmoji(postId, userId, emoji)) {
+            forumReactionRepository.deleteByPostIdAndUserIdAndEmoji(postId, userId, emoji);
+        } else {
+            forumReactionRepository.save(ForumReaction.builder()
+                    .postId(postId).userId(userId).emoji(emoji).build());
+        }
+        Set<UUID> liked = likedIds(userId, collectIds(List.of(post)));
+        return toResponse(post, liked, userId);
     }
 
     @Override
@@ -185,7 +206,7 @@ public class ForumServiceImpl implements ForumService {
         post.setAcceptedReply(reply);
         ForumPost saved = forumPostRepository.save(post);
         Set<UUID> liked = likedIds(userId, collectIds(List.of(saved)));
-        return toResponse(saved, liked);
+        return toResponse(saved, liked, userId);
     }
 
     @Override
@@ -198,7 +219,7 @@ public class ForumServiceImpl implements ForumService {
         post.setAcceptedReply(null);
         ForumPost saved = forumPostRepository.save(post);
         Set<UUID> liked = likedIds(userId, collectIds(List.of(saved)));
-        return toResponse(saved, liked);
+        return toResponse(saved, liked, userId);
     }
 
     @Override
@@ -277,18 +298,37 @@ public class ForumServiceImpl implements ForumService {
         }
     }
 
+    private List<ForumPostResponse.ReactionCount> reactionsFor(ForumPost p, UUID currentUserId) {
+        if (p.getId() == null) return List.of();
+        List<Object[]> counts = forumReactionRepository.countByEmojiForPost(p.getId());
+        if (counts.isEmpty()) return List.of();
+        Set<String> mine = new HashSet<>();
+        if (currentUserId != null) {
+            for (Object[] row : forumReactionRepository.findMineForPosts(currentUserId, List.of(p.getId()))) {
+                mine.add((String) row[1]);
+            }
+        }
+        return counts.stream()
+                .map(row -> ForumPostResponse.ReactionCount.builder()
+                        .emoji((String) row[0])
+                        .count(((Number) row[1]).longValue())
+                        .mine(mine.contains((String) row[0]))
+                        .build())
+                .toList();
+    }
+
     private Set<UUID> likedIds(UUID userId, Set<UUID> postIds) {
         if (userId == null || postIds.isEmpty()) return Set.of();
         return new HashSet<>(forumLikeRepository.findLikedPostIds(userId, postIds));
     }
 
-    private ForumPostResponse toResponse(ForumPost p, Set<UUID> liked) {
+    private ForumPostResponse toResponse(ForumPost p, Set<UUID> liked, UUID currentUserId) {
         UUID acceptedId = p.getAcceptedReply() != null ? p.getAcceptedReply().getId() : null;
         boolean isAccepted = p.getParent() != null && p.getParent().getAcceptedReply() != null
                 && p.getParent().getAcceptedReply().getId() != null
                 && p.getParent().getAcceptedReply().getId().equals(p.getId());
         List<ForumPostResponse> replies = p.getReplies() != null
-                ? p.getReplies().stream().map(r -> toResponse(r, liked)).toList()
+                ? p.getReplies().stream().map(r -> toResponse(r, liked, currentUserId)).toList()
                 : List.of();
         return ForumPostResponse.builder()
                 .id(p.getId())
@@ -317,6 +357,7 @@ public class ForumServiceImpl implements ForumService {
                         : List.of())
                 .likeCount(p.getId() != null ? forumLikeRepository.countByPostId(p.getId()) : 0L)
                 .likedByMe(p.getId() != null && liked.contains(p.getId()))
+                .reactions(reactionsFor(p, currentUserId))
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .build();

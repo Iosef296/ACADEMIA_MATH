@@ -26,6 +26,7 @@ public class ForumPostResponse {
     private List<String> tags;
     private long likeCount;
     private boolean likedByMe;
+    private List<ReactionCount> reactions;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -33,5 +34,12 @@ public class ForumPostResponse {
     public static class AuthorRef {
         private UUID id;
         private String name;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class ReactionCount {
+        private String emoji;
+        private long count;
+        private boolean mine;
     }
 }

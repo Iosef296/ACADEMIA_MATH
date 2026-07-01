@@ -21,8 +21,11 @@ interface ForumPost {
   tags: string[];
   likeCount: number;
   likedByMe: boolean;
+  reactions: { emoji: string; count: number; mine: boolean }[];
   createdAt: string;
 }
+
+export const REACTION_EMOJIS = ['👍','❤️','🎉','🤔','✅'];
 
 interface PageResp {
   items: ForumPost[];
@@ -71,6 +74,13 @@ export class ForumListComponent implements OnInit, OnDestroy {
   currentUserId: string | null = null;
   deletingId: string | null = null;
   likingId: string | null = null;
+
+  ocrLoading = false;
+  ocrError = '';
+
+  reactionEmojis = REACTION_EMOJIS;
+  reactingKey: string | null = null;
+  openReactionMenuId: string | null = null;
 
   readonly sortTabs: { key: SortMode; label: string; icon: string }[] = [
     { key: 'recent',     label: 'Recientes',    icon: '🕒' },
@@ -253,6 +263,34 @@ export class ForumListComponent implements OnInit, OnDestroy {
       });
   }
 
+  toggleReactionMenu(event: Event, postId: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.openReactionMenuId = this.openReactionMenuId === postId ? null : postId;
+  }
+
+  react(event: Event, post: ForumPost, emoji: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const key = `${post.id}-${emoji}`;
+    if (this.reactingKey) return;
+    this.reactingKey = key;
+    this.api.post<ForumPost>(`forum/${post.id}/react`, { emoji })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updated) => {
+          post.reactions = updated.reactions ?? [];
+          this.reactingKey = null;
+          this.openReactionMenuId = null;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.reactingKey = null;
+          console.error('Error reacting:', err);
+        },
+      });
+  }
+
   onTagChipClick(event: Event, tag: string): void {
     event.preventDefault();
     event.stopPropagation();
@@ -263,6 +301,36 @@ export class ForumListComponent implements OnInit, OnDestroy {
     return input.split(',')
       .map(s => s.trim().toLowerCase())
       .filter(s => s.length > 0 && s.length <= 50);
+  }
+
+  onOcrFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    input.value = '';
+    this.ocrError = '';
+    this.ocrLoading = true;
+    this.api.upload<{ latex: string; text: string }>('ocr/extract', file)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const latex = (res.latex ?? res.text ?? '').trim();
+          if (latex) {
+            const snippet = `\n\n$$${latex}$$\n\n`;
+            this.newBody = (this.newBody || '') + snippet;
+          } else {
+            this.ocrError = 'La imagen no contiene contenido matemático reconocible.';
+          }
+          this.ocrLoading = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.ocrLoading = false;
+          this.ocrError = 'No se pudo procesar la imagen. Intenta de nuevo.';
+          console.error('OCR error:', err);
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   createPost(): void {

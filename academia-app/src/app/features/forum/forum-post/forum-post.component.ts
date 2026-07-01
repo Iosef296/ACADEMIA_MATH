@@ -28,9 +28,12 @@ interface Post {
   tags: string[];
   likeCount: number;
   likedByMe: boolean;
+  reactions: { emoji: string; count: number; mine: boolean }[];
   createdAt: string;
   updatedAt: string | null;
 }
+
+const REACTION_EMOJIS = ['👍','❤️','🎉','🤔','✅'];
 
 @Component({
   selector: 'app-forum-post',
@@ -63,6 +66,13 @@ export class ForumPostComponent implements OnInit, OnDestroy {
   likingId: string | null = null;
   acceptingId: string | null = null;
 
+  ocrLoadingKey: 'body' | number | null = null;
+  ocrError = '';
+
+  reactionEmojis = REACTION_EMOJIS;
+  reactingKey: string | null = null;
+  openReactionFor: string | null = null;
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -79,6 +89,75 @@ export class ForumPostComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(u => this.currentUserId = u?.id ?? null);
     this.load();
+    this.loadDraft();
+  }
+
+  private draftKey(): string {
+    return `forum-draft-${this.postId}`;
+  }
+
+  private loadDraft(): void {
+    try {
+      const raw = localStorage.getItem(this.draftKey());
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (data.mode === 'steps' && Array.isArray(data.steps) && data.steps.length) {
+        this.replyMode = 'steps';
+        this.replySteps = data.steps;
+      } else if (typeof data.body === 'string' && data.body.trim()) {
+        this.replyMode = 'simple';
+        this.replyBody = data.body;
+      }
+    } catch { /* ignore */ }
+  }
+
+  saveDraft(): void {
+    try {
+      const payload = this.replyMode === 'steps'
+        ? { mode: 'steps', steps: this.replySteps }
+        : { mode: 'simple', body: this.replyBody };
+      localStorage.setItem(this.draftKey(), JSON.stringify(payload));
+    } catch { /* ignore */ }
+  }
+
+  private clearDraft(): void {
+    try { localStorage.removeItem(this.draftKey()); } catch {}
+  }
+
+  onReplyBodyChange(v: string): void {
+    this.replyBody = v;
+    this.saveDraft();
+  }
+
+  onStepContentChange(idx: number, v: string): void {
+    if (this.replySteps[idx]) {
+      this.replySteps[idx].content = v;
+      this.saveDraft();
+    }
+  }
+
+  toggleReactionMenuFor(id: string): void {
+    this.openReactionFor = this.openReactionFor === id ? null : id;
+  }
+
+  reactToPost(target: Post, emoji: string): void {
+    const key = `${target.id}-${emoji}`;
+    if (this.reactingKey) return;
+    this.reactingKey = key;
+    this.api.post<Post>(`forum/${target.id}/react`, { emoji })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updated) => {
+          target.reactions = updated.reactions ?? [];
+          this.reactingKey = null;
+          this.openReactionFor = null;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.reactingKey = null;
+          console.error('Error reacting:', err);
+        },
+      });
   }
 
   ngOnDestroy(): void {
@@ -350,12 +429,48 @@ export class ForumPostComponent implements OnInit, OnDestroy {
           this.replySteps = [{ title: '', content: '' }];
           this.replyMode = 'simple';
           this.replying = false;
+          this.clearDraft();
           this.cdr.detectChanges();
         },
         error: (err) => {
           this.replyError = 'Error al enviar. Intenta de nuevo.';
           this.replying = false;
           console.error('Error creating reply:', err);
+        },
+      });
+  }
+
+  onOcrFileSelected(event: Event, field: 'body' | number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    input.value = '';
+    this.ocrError = '';
+    this.ocrLoadingKey = field;
+    this.api.upload<{ latex: string; text: string }>('ocr/extract', file)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const latex = (res.latex ?? res.text ?? '').trim();
+          if (latex) {
+            const snippet = `\n\n$$${latex}$$\n\n`;
+            if (field === 'body') {
+              this.replyBody = (this.replyBody || '') + snippet;
+            } else {
+              const step = this.replySteps[field];
+              if (step) step.content = (step.content || '') + snippet;
+            }
+          } else {
+            this.ocrError = 'La imagen no contiene contenido matemático reconocible.';
+          }
+          this.ocrLoadingKey = null;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.ocrLoadingKey = null;
+          this.ocrError = 'No se pudo procesar la imagen. Intenta de nuevo.';
+          console.error('OCR error:', err);
+          this.cdr.detectChanges();
         },
       });
   }
