@@ -65,8 +65,10 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   resetMoodDate(): void {
-    localStorage.removeItem('moodAnsweredDate');
-    this.success = 'Mood reseteado. Recarga el dashboard para ver el modal.';
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('moodAnsweredDate'))
+      .forEach(k => localStorage.removeItem(k));
+    this.success = 'Mood reseteado para todos los usuarios. Recarga el dashboard.';
     setTimeout(() => (this.success = ''), 4000);
     this.cdr.detectChanges();
   }
