@@ -35,7 +35,8 @@ export class SidebarComponent implements OnInit {
     { label: 'Banco Preguntas', route: '/question-bank', icon: 'qbank', roles: ['teacher', 'admin'] },
     { label: 'Editor', route: '/editor', icon: 'editor', roles: ['teacher', 'admin'] },
     { label: 'PDF', route: '/pdf', icon: 'pdf', roles: ['teacher', 'admin'] },
-    { label: 'Administrar', route: '/admin', icon: 'admin', roles: ['admin'] },
+    { label: 'Administrar', route: '/admin/users', icon: 'admin', roles: ['admin'] },
+    { label: 'Gestión Temas', route: '/admin/topics', icon: 'topics', roles: ['admin'] },
     { label: 'Misiones', route: '/admin/missions', icon: 'missions', roles: ['admin'] },
     { label: 'Recompensas Nivel', route: '/admin/level-rewards', icon: 'rewards', roles: ['admin'] },
   ];
