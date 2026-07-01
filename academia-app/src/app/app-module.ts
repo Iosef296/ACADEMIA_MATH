@@ -20,7 +20,7 @@ import { environment } from '../environments/environment';
 import { LayoutModule } from './layout/layout.module';
 
 function wakeUpBackend() {
-  return () => fetch(environment.apiUrl + '/actuator/health').catch(() => {});
+  return () => fetch(environment.apiUrl + '/actuator/health', { mode: 'no-cors' }).catch(() => {});
 }
 
 @NgModule({
