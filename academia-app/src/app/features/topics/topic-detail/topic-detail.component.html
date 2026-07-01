@@ -71,7 +71,7 @@
         class="bg-white rounded-lg border border-gray-100 px-4 py-3 flex items-center justify-between hover:border-blue-100 transition">
 
         <!-- Confirm delete inline -->
-        <ng-container *ngIf="canManage && confirmDeleteId === child.id; else normalChild">
+        <ng-container *ngIf="canManage && confirmDeleteId === child.id">
           <span class="text-sm text-red-600 font-medium">¿Eliminar "{{ child.name }}"?</span>
           <div class="flex items-center gap-2 shrink-0 ml-2">
             <button (click)="deleteTema(child)" [disabled]="deletingId === child.id"
@@ -81,19 +81,18 @@
           </div>
         </ng-container>
 
-        <ng-template #normalChild>
-          <a [routerLink]="isLocked(child) ? null : ['/topics', child.id]"
+        <!-- Normal row -->
+        <ng-container *ngIf="!(canManage && confirmDeleteId === child.id)">
+          <a [routerLink]="['/topics', child.id]"
             class="flex-1 flex items-center gap-2 min-w-0"
-            [class.opacity-50]="isLocked(child)"
-            [class.pointer-events-none]="isLocked(child)">
+            [class.opacity-50]="isLocked(child)">
             <svg *ngIf="isLocked(child)" class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
             </svg>
             <span class="text-sm font-medium truncate"
               [class.text-gray-400]="isLocked(child)"
-              [class.text-gray-700]="!isLocked(child)"
-              [class.hover:text-blue-700]="!isLocked(child)">
+              [class.text-gray-700]="!isLocked(child)">
               {{ child.name }}
             </span>
             <span *ngIf="child.difficulty"
@@ -120,7 +119,7 @@
               </svg>
             </button>
           </div>
-        </ng-template>
+        </ng-container>
       </div>
     </div>
 
