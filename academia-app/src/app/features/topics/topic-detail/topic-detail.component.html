@@ -17,6 +17,14 @@
     <span class="text-gray-900 font-medium">{{ topic.name }}</span>
   </div>
 
+  <!-- Alerts -->
+  <div *ngIf="success" class="mb-4 px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+    {{ success }}
+  </div>
+  <div *ngIf="error" class="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+    {{ error }}
+  </div>
+
   <!-- Topic header + progress -->
   <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
     <div class="flex items-start justify-between gap-4">
@@ -51,9 +59,20 @@
   </div>
 
   <!-- Subtopics -->
-  <div *ngIf="topic.children && topic.children.length > 0" class="mb-6">
-    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Temas del curso</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  <div class="mb-6">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Temas del curso</h2>
+      <button *ngIf="canManage"
+        (click)="showCreate = true"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Añadir tema
+      </button>
+    </div>
+
+    <div *ngIf="topic.children && topic.children.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <a *ngFor="let child of topic.children"
         [routerLink]="['/topics', child.id]"
         class="bg-white rounded-lg border border-gray-100 px-4 py-3 flex items-center justify-between
@@ -63,6 +82,11 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </a>
+    </div>
+
+    <div *ngIf="!topic.children || topic.children.length === 0"
+      class="bg-white rounded-xl border border-gray-100 p-8 text-center">
+      <p class="text-gray-400 text-sm">Este curso no tiene temas aún.</p>
     </div>
   </div>
 
@@ -114,4 +138,53 @@
 <div *ngIf="!loading && !topic" class="text-center py-16 text-gray-400">
   Tema no encontrado.
   <a routerLink="/topics" class="block mt-2 text-blue-600 hover:underline text-sm">Volver a cursos</a>
+</div>
+
+<!-- Create topic modal -->
+<div *ngIf="showCreate"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+  (click)="showCreate = false">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6" (click)="$event.stopPropagation()">
+    <h3 class="text-lg font-bold text-gray-900 mb-5">Añadir tema</h3>
+
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
+        <input [(ngModel)]="createForm.name" type="text" placeholder="Ej: Ecuaciones lineales"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Descripción</label>
+        <textarea [(ngModel)]="createForm.description" rows="2" placeholder="Descripción opcional..."
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Dificultad</label>
+          <select [(ngModel)]="createForm.difficulty"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option *ngFor="let d of difficulties" [value]="d.value">{{ d.label }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Minutos estimados</label>
+          <input [(ngModel)]="createForm.estimated_minutes" type="number" min="0"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 mt-6">
+      <button (click)="showCreate = false"
+        class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition">
+        Cancelar
+      </button>
+      <button (click)="createTopic()" [disabled]="creating || !createForm.name.trim()"
+        class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition">
+        {{ creating ? 'Creando...' : 'Crear tema' }}
+      </button>
+    </div>
+  </div>
 </div>
