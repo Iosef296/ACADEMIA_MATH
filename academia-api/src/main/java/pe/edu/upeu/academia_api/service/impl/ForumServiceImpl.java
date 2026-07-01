@@ -12,8 +12,10 @@ import pe.edu.upeu.academia_api.dto.forum.ForumPageResponse;
 import pe.edu.upeu.academia_api.dto.forum.ForumPostRequest;
 import pe.edu.upeu.academia_api.dto.forum.ForumPostResponse;
 import pe.edu.upeu.academia_api.dto.forum.ForumStatsResponse;
+import pe.edu.upeu.academia_api.dto.forum.ForumStepDto;
 import pe.edu.upeu.academia_api.entity.ForumLike;
 import pe.edu.upeu.academia_api.entity.ForumPost;
+import pe.edu.upeu.academia_api.entity.ForumReplyStep;
 import pe.edu.upeu.academia_api.entity.ForumTag;
 import pe.edu.upeu.academia_api.exception.AppException;
 import pe.edu.upeu.academia_api.repository.*;
@@ -99,9 +101,14 @@ public class ForumServiceImpl implements ForumService {
     @Override
     @Transactional
     public ForumPostResponse create(ForumPostRequest request, UUID userId) {
+        boolean hasContent = request.getContent() != null && !request.getContent().isBlank();
+        boolean hasSteps = request.getSteps() != null && !request.getSteps().isEmpty();
+        if (!hasContent && !hasSteps) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "El contenido o los pasos son obligatorios");
+        }
         ForumPost post = ForumPost.builder()
                 .title(request.getTitle())
-                .content(request.getContent())
+                .content(hasContent ? request.getContent() : "")
                 .user(userRepository.findById(userId)
                         .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuario no encontrado")))
                 .build();
@@ -115,6 +122,7 @@ public class ForumServiceImpl implements ForumService {
             forumPostRepository.findById(request.getParentId()).ifPresent(post::setParent);
         }
         post.setTags(resolveTags(request.getTags()));
+        applySteps(post, request.getSteps());
         return toResponse(forumPostRepository.save(post), Set.of());
     }
 
@@ -126,10 +134,14 @@ public class ForumServiceImpl implements ForumService {
             throw new AppException(HttpStatus.FORBIDDEN, "Solo el autor puede editar este post");
         }
         post.setTitle(request.getTitle());
-        post.setContent(request.getContent());
+        if (request.getContent() != null) post.setContent(request.getContent());
         if (request.getTags() != null) {
             post.getTags().clear();
             post.getTags().addAll(resolveTags(request.getTags()));
+        }
+        if (request.getSteps() != null) {
+            post.getSteps().clear();
+            applySteps(post, request.getSteps());
         }
         ForumPost saved = forumPostRepository.save(post);
         Set<UUID> liked = likedIds(userId, collectIds(List.of(saved)));
@@ -215,6 +227,21 @@ public class ForumServiceImpl implements ForumService {
                 .build();
     }
 
+    private void applySteps(ForumPost post, List<ForumStepDto> steps) {
+        if (steps == null) return;
+        int order = 1;
+        for (ForumStepDto dto : steps) {
+            if (dto == null || dto.getContent() == null || dto.getContent().isBlank()) continue;
+            ForumReplyStep step = ForumReplyStep.builder()
+                    .reply(post)
+                    .stepOrder(order++)
+                    .title(dto.getTitle())
+                    .content(dto.getContent())
+                    .build();
+            post.getSteps().add(step);
+        }
+    }
+
     private Set<ForumTag> resolveTags(List<String> names) {
         Set<ForumTag> result = new HashSet<>();
         if (names == null) return result;
@@ -275,6 +302,13 @@ public class ForumServiceImpl implements ForumService {
                 .exerciseId(p.getExercise() != null ? p.getExercise().getId() : null)
                 .parentId(p.getParent() != null ? p.getParent().getId() : null)
                 .replies(replies)
+                .steps(p.getSteps() != null
+                        ? p.getSteps().stream().map(s -> ForumStepDto.builder()
+                                .order(s.getStepOrder())
+                                .title(s.getTitle())
+                                .content(s.getContent())
+                                .build()).toList()
+                        : List.of())
                 .replyCount(replies.size())
                 .acceptedReplyId(acceptedId)
                 .isAccepted(isAccepted)

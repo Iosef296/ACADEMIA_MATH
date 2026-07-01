@@ -6,6 +6,12 @@ import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 import { selectCurrentUser } from '../../../store/auth/auth.selectors';
 
+interface Step {
+  order: number;
+  title: string | null;
+  content: string;
+}
+
 interface Post {
   id: string;
   title: string | null;
@@ -15,6 +21,7 @@ interface Post {
   exerciseId: string | null;
   parentId: string | null;
   replies: Post[];
+  steps: Step[];
   replyCount: number;
   acceptedReplyId: string | null;
   isAccepted: boolean;
@@ -39,6 +46,9 @@ export class ForumPostComponent implements OnInit, OnDestroy {
   replyBody = '';
   replying = false;
   replyError = '';
+  replyMode: 'simple' | 'steps' = 'simple';
+  replySteps: { title: string; content: string }[] = [{ title: '', content: '' }];
+  copiedStepKey: string | null = null;
 
   currentUserId: string | null = null;
 
@@ -85,6 +95,7 @@ export class ForumPostComponent implements OnInit, OnDestroy {
           this.post = data;
           this.loading = false;
           this.cdr.detectChanges();
+          this.scrollToHash();
         },
         error: (err) => {
           this.error = 'No se pudo cargar la publicación.';
@@ -278,18 +289,66 @@ export class ForumPostComponent implements OnInit, OnDestroy {
       });
   }
 
+  addStep(): void {
+    this.replySteps.push({ title: '', content: '' });
+  }
+
+  removeStep(idx: number): void {
+    if (this.replySteps.length === 1) {
+      this.replySteps[0] = { title: '', content: '' };
+    } else {
+      this.replySteps.splice(idx, 1);
+    }
+  }
+
+  moveStep(idx: number, dir: -1 | 1): void {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= this.replySteps.length) return;
+    const [item] = this.replySteps.splice(idx, 1);
+    this.replySteps.splice(newIdx, 0, item);
+  }
+
+  setReplyMode(mode: 'simple' | 'steps'): void {
+    this.replyMode = mode;
+    if (mode === 'steps' && this.replySteps.length === 0) {
+      this.replySteps = [{ title: '', content: '' }];
+    }
+  }
+
   sendReply(): void {
-    if (!this.replyBody.trim()) return;
+    const inStepMode = this.replyMode === 'steps';
+    const steps = inStepMode
+      ? this.replySteps
+          .map(s => ({ title: (s.title || '').trim() || null, content: (s.content || '').trim() }))
+          .filter(s => s.content.length > 0)
+      : [];
+
+    if (inStepMode && steps.length === 0) {
+      this.replyError = 'Añade al menos un paso con contenido.';
+      return;
+    }
+    if (!inStepMode && !this.replyBody.trim()) return;
+
     this.replying = true;
     this.replyError = '';
 
+    const body: any = { parentId: this.postId };
+    if (inStepMode) {
+      body.content = '';
+      body.steps = steps.map((s, i) => ({ order: i + 1, ...s }));
+    } else {
+      body.content = this.replyBody.trim();
+    }
+
     this.api
-      .post<Post>('forum', { content: this.replyBody.trim(), parentId: this.postId })
+      .post<Post>('forum', body)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (reply) => {
           this.post?.replies.push(reply);
           this.replyBody = '';
+          this.replySteps = [{ title: '', content: '' }];
+          this.replyMode = 'simple';
           this.replying = false;
           this.cdr.detectChanges();
         },
@@ -299,6 +358,52 @@ export class ForumPostComponent implements OnInit, OnDestroy {
           console.error('Error creating reply:', err);
         },
       });
+  }
+
+  applyFormat(field: 'body' | number, format: 'bold' | 'italic' | 'code' | 'codeblock' | 'list'): void {
+    const wraps: Record<string, [string, string]> = {
+      bold:      ['**', '**'],
+      italic:    ['*', '*'],
+      code:      ['`', '`'],
+      codeblock: ['\n```\n', '\n```\n'],
+      list:      ['\n- ', ''],
+    };
+    const [pre, post] = wraps[format];
+    const insert = (current: string) => current + pre + 'texto' + post;
+    if (field === 'body') {
+      this.replyBody = insert(this.replyBody || '');
+    } else {
+      const step = this.replySteps[field];
+      if (step) step.content = insert(step.content || '');
+    }
+  }
+
+  copyStepLink(replyId: string, order: number): void {
+    const url = `${window.location.origin}${window.location.pathname}#reply-${replyId}-paso-${order}`;
+    const key = `${replyId}-${order}`;
+    navigator.clipboard.writeText(url).then(() => {
+      this.copiedStepKey = key;
+      setTimeout(() => {
+        if (this.copiedStepKey === key) {
+          this.copiedStepKey = null;
+          this.cdr.detectChanges();
+        }
+      }, 1500);
+      this.cdr.detectChanges();
+    }).catch(err => console.error('Clipboard error:', err));
+  }
+
+  scrollToHash(): void {
+    const hash = window.location.hash?.replace('#', '');
+    if (!hash) return;
+    setTimeout(() => {
+      const el = document.getElementById(hash);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-4', 'ring-yellow-300', 'transition');
+        setTimeout(() => el.classList.remove('ring-4', 'ring-yellow-300'), 2500);
+      }
+    }, 300);
   }
 
   wasEdited(p: Post): boolean {

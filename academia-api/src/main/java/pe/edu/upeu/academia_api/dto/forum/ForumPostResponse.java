@@ -19,6 +19,7 @@ public class ForumPostResponse {
     private UUID exerciseId;
     private UUID parentId;
     private List<ForumPostResponse> replies;
+    private List<ForumStepDto> steps;
     private int replyCount;
     private UUID acceptedReplyId;
     private boolean isAccepted;

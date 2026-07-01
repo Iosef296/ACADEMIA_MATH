@@ -55,6 +55,11 @@ public class ForumPost {
     @Builder.Default
     private List<ForumAttachment> attachments = new ArrayList<>();
 
+    @OneToMany(mappedBy = "reply", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("stepOrder ASC")
+    @Builder.Default
+    private List<ForumReplyStep> steps = new ArrayList<>();
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "forum_post_tags",
             joinColumns = @JoinColumn(name = "post_id"),
