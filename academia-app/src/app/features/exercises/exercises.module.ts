@@ -7,7 +7,6 @@ import { ExerciseDetailComponent } from './exercise-detail/exercise-detail.compo
 import { ExerciseCreateComponent } from './exercise-create/exercise-create.component';
 import { FlashcardsComponent } from './flashcards/flashcards.component';
 import { SharedModule } from '../../shared/shared.module';
-import { EditorModule } from '../editor/editor.module';
 
 const routes: Routes = [
   { path: '', component: ExerciseListComponent },
@@ -18,6 +17,6 @@ const routes: Routes = [
 
 @NgModule({
   declarations: [ExerciseListComponent, ExerciseDetailComponent, FlashcardsComponent, ExerciseCreateComponent],
-  imports: [CommonModule, FormsModule, RouterModule.forChild(routes), SharedModule, EditorModule],
+  imports: [CommonModule, FormsModule, RouterModule.forChild(routes), SharedModule],
 })
 export class ExercisesModule {}

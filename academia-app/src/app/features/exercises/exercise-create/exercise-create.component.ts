@@ -3,7 +3,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, firstValueFrom } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
-import { GraphConfig } from '../../editor/graph-editor/graph-editor.component';
 
 interface VarEntry {
   varName: string;
@@ -33,8 +32,6 @@ export class ExerciseCreateComponent implements OnInit, OnDestroy {
 
   vars: VarEntry[] = [];
   newVarName = '';
-
-  graphConfig: GraphConfig = { level: 'auto', expression: 'sin(x)' };
 
   saving = false;
   error = '';
@@ -115,10 +112,6 @@ export class ExerciseCreateComponent implements OnInit, OnDestroy {
   }
 
   removeVar(i: number): void { this.vars.splice(i, 1); }
-
-  onGraphConfigChange(config: GraphConfig): void {
-    this.graphConfig = config;
-  }
 
   cancel(): void {
     if (this.topicId) this.router.navigate(['/topics', this.topicId]);
