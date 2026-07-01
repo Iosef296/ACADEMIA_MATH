@@ -1,4 +1,4 @@
-import { NgModule, LOCALE_ID, APP_INITIALIZER, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { NgModule, LOCALE_ID, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeEs from '@angular/common/locales/es';
 import { BrowserModule } from '@angular/platform-browser';
@@ -18,10 +18,6 @@ import { AuthEffects } from './store/auth/auth.effects';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { environment } from '../environments/environment';
 import { LayoutModule } from './layout/layout.module';
-
-function wakeUpBackend() {
-  return () => fetch(environment.apiUrl + '/actuator/health', { mode: 'no-cors' }).catch(() => {});
-}
 
 @NgModule({
   declarations: [App],
@@ -45,7 +41,6 @@ function wakeUpBackend() {
     provideHttpClient(withInterceptorsFromDi()),
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     { provide: LOCALE_ID, useValue: 'es' },
-    { provide: APP_INITIALIZER, useFactory: wakeUpBackend, multi: true },
   ],
   bootstrap: [App],
 })
