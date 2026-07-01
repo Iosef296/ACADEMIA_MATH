@@ -121,6 +121,10 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
     return this.progress.xp % 100;
   }
 
+  get basicExercises()        { return this.exercises.filter(e => e.difficulty === 'basic'); }
+  get intermediateExercises() { return this.exercises.filter(e => e.difficulty === 'intermediate'); }
+  get advancedExercises()     { return this.exercises.filter(e => e.difficulty === 'advanced'); }
+
   // Only temas (child topics with parent_id) as prereq options
   get prereqOptionsCreate(): Topic[] {
     return this.allTopics.filter(t => t.parent_id);
