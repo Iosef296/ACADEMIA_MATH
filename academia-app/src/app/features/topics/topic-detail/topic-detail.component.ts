@@ -22,6 +22,7 @@ interface Topic {
   difficulty?: string;
   estimated_minutes?: number;
   prerequisite_ids?: string[];
+  parent_id?: string | null;
   children?: Topic[];
 }
 
@@ -30,6 +31,13 @@ interface Progress {
   level: number;
   exercises_solved: number;
   error_count: number;
+}
+
+interface ProgressSummary {
+  topic_name: string;
+  xp: number;
+  level: number;
+  exercises_solved: number;
 }
 
 @Component({
@@ -43,41 +51,31 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
   allTopics: Topic[] = [];
   exercises: Exercise[] = [];
   progress: Progress | null = null;
+  progressMap: Map<string, ProgressSummary> = new Map();
   loading = false;
   error = '';
   success = '';
   userRole: string | undefined;
 
   difficultyLabel: Record<string, string> = {
-    basic: 'Básico',
-    intermediate: 'Intermedio',
-    advanced: 'Avanzado',
-    basico: 'Básico',
-    intermedio: 'Intermedio',
-    avanzado: 'Avanzado',
+    basic: 'Básico', intermediate: 'Intermedio', advanced: 'Avanzado',
+    basico: 'Básico', intermedio: 'Intermedio', avanzado: 'Avanzado',
   };
 
   difficultyColor: Record<string, string> = {
-    basic: 'bg-green-100 text-green-700',
-    intermediate: 'bg-yellow-100 text-yellow-700',
-    advanced: 'bg-red-100 text-red-700',
-    basico: 'bg-green-100 text-green-700',
-    intermedio: 'bg-yellow-100 text-yellow-700',
-    avanzado: 'bg-red-100 text-red-700',
+    basic: 'bg-green-100 text-green-700', intermediate: 'bg-yellow-100 text-yellow-700', advanced: 'bg-red-100 text-red-700',
+    basico: 'bg-green-100 text-green-700', intermedio: 'bg-yellow-100 text-yellow-700', avanzado: 'bg-red-100 text-red-700',
   };
 
-  // Create child topic modal
   showCreate = false;
   createForm = { name: '', description: '', difficulty: 'basico', estimated_minutes: 0, prerequisite_ids: [] as string[] };
   creating = false;
 
-  // Edit child topic modal
   showEdit = false;
   editingTema: Topic | null = null;
   editForm = { name: '', description: '', difficulty: 'basico', estimated_minutes: 0, prerequisite_ids: [] as string[] };
   saving = false;
 
-  // Delete
   confirmDeleteId: string | null = null;
   deletingId: string | null = null;
 
@@ -113,8 +111,6 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
     return this.userRole === 'admin' || this.userRole === 'teacher';
   }
 
-  get isCourse(): boolean { return !!(this.topic?.children?.length); }
-
   get xpToNextLevel(): number {
     if (!this.progress) return 100;
     return 100 - (this.progress.xp % 100);
@@ -125,8 +121,24 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
     return this.progress.xp % 100;
   }
 
+  // Only temas (child topics with parent_id) as prereq options
+  get prereqOptionsCreate(): Topic[] {
+    return this.allTopics.filter(t => t.parent_id);
+  }
+
   get prereqOptions(): Topic[] {
-    return this.allTopics.filter(t => t.id !== this.editingTema?.id);
+    return this.allTopics.filter(t => t.parent_id && t.id !== this.editingTema?.id);
+  }
+
+  isLocked(child: Topic): boolean {
+    if (child.is_locked) return true;
+    if (!child.prerequisite_ids?.length) return false;
+    return child.prerequisite_ids.some(prereqId => {
+      const prereq = this.allTopics.find(t => t.id === prereqId);
+      if (!prereq) return false;
+      const prog = this.progressMap.get(prereq.name?.toLowerCase());
+      return !prog || prog.exercises_solved === 0;
+    });
   }
 
   loadTopic(): void {
@@ -136,11 +148,15 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
       firstValueFrom(this.api.get<Exercise[]>(`exercises?topicId=${this.topicId}`)),
       firstValueFrom(this.api.get<Progress>(`progress/topics/${this.topicId}`)),
       firstValueFrom(this.api.get<Topic[]>('topics/all')),
-    ]).then(([topic, exercises, progress, allTopics]) => {
+      firstValueFrom(this.api.get<ProgressSummary[]>('progress')),
+    ]).then(([topic, exercises, progress, allTopics, progressList]) => {
       this.topic = topic ?? null;
       this.exercises = exercises ?? [];
       this.progress = progress ?? null;
       this.allTopics = Array.isArray(allTopics) ? allTopics : [];
+      const map = new Map<string, ProgressSummary>();
+      (Array.isArray(progressList) ? progressList : []).forEach(p => map.set(p.topic_name?.toLowerCase(), p));
+      this.progressMap = map;
       this.loading = false;
       this.cdr.detectChanges();
     }).catch(() => {
@@ -160,8 +176,6 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
     if (diff === 'intermedio' || diff === 'intermediate') return { label: 'Intermedio', cls: 'bg-yellow-100 text-yellow-700' };
     return { label: 'Básico', cls: 'bg-green-100 text-green-700' };
   }
-
-  // ── Create ────────────────────────────────────────────────
 
   createTopic(): void {
     if (!this.createForm.name.trim()) return;
@@ -190,8 +204,6 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
         },
       });
   }
-
-  // ── Edit ──────────────────────────────────────────────────
 
   startEdit(tema: Topic): void {
     this.editingTema = tema;
@@ -237,8 +249,6 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
         },
       });
   }
-
-  // ── Delete ────────────────────────────────────────────────
 
   confirmDelete(id: string): void { this.confirmDeleteId = id; }
   cancelDelete(): void { this.confirmDeleteId = null; }
