@@ -52,8 +52,8 @@
     </div>
   </div>
 
-  <!-- Subtopics -->
-  <div class="mb-6">
+  <!-- Subtopics (solo para cursos raíz) -->
+  <div *ngIf="!topic.parent_id" class="mb-6">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Temas del curso</h2>
       <button *ngIf="canManage"
