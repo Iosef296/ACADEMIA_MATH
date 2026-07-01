@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Location } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { MathEditorComponent } from '../math-editor/math-editor.component';
@@ -63,8 +64,11 @@ export class ExerciseEditorComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private api: ApiService
+    private api: ApiService,
+    private location: Location,
   ) {}
+
+  goBack(): void { this.location.back(); }
 
   ngOnInit(): void {
     this.api.get<Topic[]>('topics')
