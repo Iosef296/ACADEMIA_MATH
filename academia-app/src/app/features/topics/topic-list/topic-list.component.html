@@ -105,11 +105,6 @@
               </svg>
             </h3>
             <div class="flex items-center gap-1.5 shrink-0">
-              <!-- Difficulty badge -->
-              <span class="text-xs font-semibold px-2 py-0.5 rounded-full"
-                [ngClass]="difficultyBadge(topic.difficulty || 'basico').cls">
-                {{ difficultyBadge(topic.difficulty || 'basico').label }}
-              </span>
               <!-- XP badge -->
               <span *ngIf="getProgress(topic.name) as p"
                 class="text-xs font-semibold text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">
