@@ -4,20 +4,17 @@
   <div class="mb-6 flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-gray-900">Clases en vivo</h1>
-      <p class="text-sm text-gray-500 mt-1">Sesiones activas de video con tu docente</p>
+      <p class="text-sm text-gray-500 mt-1">Sesiones activas y programadas con tu docente</p>
     </div>
-
-    <!-- Create button (teacher/admin only) -->
     <button *ngIf="isTeacher"
       (click)="openCreateModal()"
       class="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700
-        text-white text-sm font-semibold rounded-xl shadow-sm
-        hover:shadow-md transition-all duration-200 active:scale-95">
+        text-white text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all duration-200 active:scale-95">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
       </svg>
-      Iniciar clase en vivo
+      Nueva clase
     </button>
   </div>
 
@@ -31,11 +28,9 @@
 
   <div *ngIf="!loading">
 
-    <!-- Active sessions -->
+    <!-- ── EN VIVO AHORA ── -->
     <div class="mb-8">
-      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-        En vivo ahora
-      </h2>
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">En vivo ahora</h2>
 
       <div *ngIf="active.length === 0"
         class="text-center py-10 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 text-sm">
@@ -44,17 +39,12 @@
             d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
         </svg>
         No hay sesiones activas en este momento.
-        <span *ngIf="isTeacher" class="block mt-1 text-gray-500">
-          Puedes iniciar una nueva clase en vivo con el botón de arriba.
-        </span>
+        <span *ngIf="isTeacher" class="block mt-1 text-gray-500">Puedes iniciar o programar una clase con el botón de arriba.</span>
       </div>
 
       <div class="space-y-3">
         <div *ngFor="let s of active"
-          class="bg-white rounded-xl border-2 border-red-200 shadow-sm p-5 flex items-center gap-5
-            hover:border-red-300 hover:shadow-md transition group">
-
-          <!-- Pulsing icon -->
+          class="bg-white rounded-xl border-2 border-red-200 shadow-sm p-5 flex items-center gap-5 hover:border-red-300 hover:shadow-md transition group">
           <div class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center shrink-0 relative">
             <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -62,42 +52,29 @@
             </svg>
             <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
           </div>
-
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-0.5">
               <span class="text-xs font-bold text-red-600 uppercase tracking-wide">En vivo</span>
-              <span *ngIf="s.course"
-                class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
-                {{ s.course }}
-              </span>
+              <span *ngIf="s.course" class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">{{ s.course }}</span>
             </div>
             <h3 class="font-semibold text-gray-900 truncate">{{ s.title }}</h3>
-            <div class="flex items-center gap-2 mt-1 flex-wrap text-xs text-gray-500">
+            <div class="flex items-center gap-2 mt-1 text-xs text-gray-500">
               <span>{{ s.teacherName }}</span>
               <span class="text-gray-300">&middot;</span>
               <span>{{ timeAgo(s.startTime) }}</span>
             </div>
           </div>
-
           <div class="flex items-center gap-2 shrink-0">
-            <!-- End session button (owner only) -->
-            <button *ngIf="isOwner(s)"
-              (click)="endSession(s, $event)"
-              class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700
-                text-xs font-semibold rounded-lg transition"
+            <button *ngIf="isOwner(s)" (click)="endSession(s, $event)"
+              class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition"
               title="Finalizar sesión">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
               </svg>
             </button>
-
-            <!-- Join button -->
             <a [routerLink]="['/live', s.id]"
-              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white
-                text-sm font-semibold rounded-lg transition">
+              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition">
               Unirse
             </a>
           </div>
@@ -105,37 +82,74 @@
       </div>
     </div>
 
-    <!-- Past sessions grouped by course -->
+    <!-- ── PRÓXIMAS CLASES ── -->
+    <div *ngIf="scheduled.length > 0" class="mb-8">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Próximas clases</h2>
+
+      <div class="space-y-3">
+        <div *ngFor="let s of scheduled"
+          class="bg-white rounded-xl border-2 border-blue-100 shadow-sm p-5 flex items-center gap-5 hover:border-blue-200 transition">
+
+          <!-- Calendar icon with day number -->
+          <div class="w-14 h-14 rounded-xl bg-blue-50 flex flex-col items-center justify-center shrink-0 border border-blue-100">
+            <span class="text-xs font-bold text-blue-500 uppercase leading-none">
+              {{ (s.startTime | date:'EEE':'':'es') }}
+            </span>
+            <span class="text-xl font-extrabold text-blue-700 leading-tight">
+              {{ s.startTime | date:'d':'':'es' }}
+            </span>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="text-xs font-bold text-blue-600 uppercase tracking-wide">Programada</span>
+              <span *ngIf="s.course" class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">{{ s.course }}</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 truncate">{{ s.title }}</h3>
+            <div class="flex items-center gap-2 mt-1 text-xs text-gray-500">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{{ formatScheduled(s.startTime) }}</span>
+              <span class="text-gray-300">&middot;</span>
+              <span class="text-blue-500 font-medium">{{ timeUntil(s.startTime) }}</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <button *ngIf="isOwner(s)" (click)="cancelSession(s, $event)"
+              class="px-3 py-1.5 bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-500 text-xs font-medium rounded-lg transition"
+              title="Cancelar sesión">
+              Cancelar
+            </button>
+            <span class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded-lg">
+              Pronto
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SESIONES ANTERIORES ── -->
     <div *ngIf="pastByCourse.length > 0">
-      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-        Sesiones anteriores
-      </h2>
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Sesiones anteriores</h2>
 
       <div class="space-y-2">
         <div *ngFor="let group of pastByCourse" class="rounded-xl border border-gray-200 bg-white overflow-hidden">
-
-          <!-- Course header (accordion toggle) -->
-          <button
-            (click)="toggleCourse(group.course)"
+          <button (click)="toggleCourse(group.course)"
             class="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition text-left">
-
             <div class="flex items-center gap-3">
-              <!-- Course icon -->
               <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                <svg class="w-4.5 h-4.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
               <div>
                 <p class="font-semibold text-gray-800 text-sm">{{ group.course }}</p>
-                <p class="text-xs text-gray-400">
-                  {{ group.sessions.length }} {{ group.sessions.length === 1 ? 'sesión' : 'sesiones' }}
-                </p>
+                <p class="text-xs text-gray-400">{{ group.sessions.length }} {{ group.sessions.length === 1 ? 'sesión' : 'sesiones' }}</p>
               </div>
             </div>
-
-            <!-- Chevron -->
             <svg class="w-4 h-4 text-gray-400 transition-transform duration-200"
               [class.rotate-180]="expandedCourse === group.course"
               fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,19 +157,14 @@
             </svg>
           </button>
 
-          <!-- Expanded sessions list -->
-          <div *ngIf="expandedCourse === group.course"
-            class="border-t border-gray-100 divide-y divide-gray-50">
-            <div *ngFor="let s of group.sessions"
-              class="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition">
-
+          <div *ngIf="expandedCourse === group.course" class="border-t border-gray-100 divide-y divide-gray-50">
+            <div *ngFor="let s of group.sessions" class="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition">
               <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
                 </svg>
               </div>
-
               <div class="flex-1 min-w-0">
                 <h3 class="text-sm font-medium text-gray-700 truncate">{{ s.title }}</h3>
                 <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
@@ -164,11 +173,9 @@
                   <span>{{ timeAgo(s.startTime) }}</span>
                 </div>
               </div>
-
               <span class="text-xs text-gray-400 shrink-0">Finalizada</span>
             </div>
           </div>
-
         </div>
       </div>
     </div>
@@ -176,7 +183,7 @@
   </div>
 </div>
 
-<!-- Create Session Modal -->
+<!-- ── MODAL CREAR SESIÓN ── -->
 <div *ngIf="showCreateModal"
   class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
   (click)="closeCreateModal()">
@@ -184,7 +191,6 @@
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative"
     (click)="$event.stopPropagation()">
 
-    <!-- Close button -->
     <button (click)="closeCreateModal()"
       class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,7 +198,6 @@
       </svg>
     </button>
 
-    <!-- Header -->
     <div class="flex items-center gap-3 mb-5">
       <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
         <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,66 +206,96 @@
         </svg>
       </div>
       <div>
-        <h2 class="text-lg font-bold text-gray-900">Iniciar clase en vivo</h2>
-        <p class="text-xs text-gray-500">Se creará una sala de video automáticamente</p>
+        <h2 class="text-lg font-bold text-gray-900">Nueva clase en vivo</h2>
+        <p class="text-xs text-gray-500">Inicia ahora o programa para después</p>
       </div>
     </div>
 
-    <!-- Form -->
     <div class="space-y-4">
 
-      <!-- Course select -->
+      <!-- Curso -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5" for="live-course">
-          Curso
-        </label>
-        <select id="live-course"
-          [(ngModel)]="newCourse"
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Curso</label>
+        <select [(ngModel)]="newCourse" [disabled]="creating"
           class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm
-            focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent
-            text-gray-700 transition bg-white"
-          [disabled]="creating">
+            focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white text-gray-700 transition">
           <option value="" disabled>Selecciona un curso...</option>
           <option *ngFor="let c of courses" [value]="c">{{ c }}</option>
         </select>
       </div>
 
-      <!-- Title input -->
+      <!-- Título -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5" for="live-title">
-          Título de la sesión
-        </label>
-        <input id="live-title"
-          type="text"
-          [(ngModel)]="newTitle"
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Título de la sesión</label>
+        <input type="text" [(ngModel)]="newTitle" [disabled]="creating"
           placeholder="Ej: Repaso de álgebra — Ecuaciones cuadráticas"
           class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm
             focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent
             placeholder:text-gray-400 transition"
-          (keydown.enter)="createSession()"
-          [disabled]="creating"
           autofocus />
       </div>
 
+      <!-- Modo: ahora / programar -->
+      <div class="flex rounded-xl border border-gray-200 overflow-hidden">
+        <button (click)="scheduleMode = false"
+          [class.bg-red-600]="!scheduleMode" [class.text-white]="!scheduleMode"
+          [class.text-gray-500]="scheduleMode"
+          class="flex-1 py-2.5 text-sm font-semibold transition flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Iniciar ahora
+        </button>
+        <button (click)="scheduleMode = true"
+          [class.bg-blue-600]="scheduleMode" [class.text-white]="scheduleMode"
+          [class.text-gray-500]="!scheduleMode"
+          class="flex-1 py-2.5 text-sm font-semibold transition flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Programar
+        </button>
+      </div>
+
+      <!-- Date/time pickers (solo si scheduleMode) -->
+      <div *ngIf="scheduleMode" class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
+          <input type="date" [(ngModel)]="scheduledDate" [min]="minDate" [disabled]="creating"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm
+              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Hora</label>
+          <input type="time" [(ngModel)]="scheduledTime" [disabled]="creating"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm
+              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" />
+        </div>
+      </div>
+
+      <!-- Actions -->
       <div class="flex items-center gap-3 pt-2">
-        <button (click)="closeCreateModal()"
-          class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700
-            text-sm font-medium rounded-xl hover:bg-gray-50 transition"
-          [disabled]="creating">
+        <button (click)="closeCreateModal()" [disabled]="creating"
+          class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition">
           Cancelar
         </button>
-        <button (click)="createSession()"
-          class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white
-            text-sm font-semibold rounded-xl transition disabled:opacity-50
-            disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          [disabled]="!newTitle.trim() || !newCourse || creating">
+        <button (click)="createSession()" [disabled]="!canCreate || creating"
+          [class.bg-red-600]="!scheduleMode" [class.hover:bg-red-700]="!scheduleMode"
+          [class.bg-blue-600]="scheduleMode" [class.hover:bg-blue-700]="scheduleMode"
+          class="flex-1 px-4 py-2.5 text-white text-sm font-semibold rounded-xl transition
+            disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
           <svg *ngIf="creating" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          {{ creating ? 'Creando...' : 'Iniciar sesión' }}
+          {{ creating ? 'Guardando...' : scheduleMode ? 'Programar clase' : 'Iniciar sesión' }}
         </button>
       </div>
+
     </div>
   </div>
 </div>

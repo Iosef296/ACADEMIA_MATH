@@ -38,12 +38,15 @@ public class LiveServiceImpl implements LiveService {
     @Override
     @Transactional
     public LiveSessionResponse create(LiveSessionRequest request, UUID teacherId) {
+        LocalDateTime startTime = request.getStartTime() != null ? request.getStartTime() : LocalDateTime.now();
+        boolean isScheduled = startTime.isAfter(LocalDateTime.now().plusMinutes(1));
+
         LiveSession session = LiveSession.builder()
                 .title(request.getTitle())
                 .course(request.getCourse())
                 .jitsiRoomId("academia-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12))
-                .startTime(request.getStartTime() != null ? request.getStartTime() : LocalDateTime.now())
-                .status("ACTIVE")
+                .startTime(startTime)
+                .status(isScheduled ? "SCHEDULED" : "ACTIVE")
                 .teacher(userRepository.findById(teacherId)
                         .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuario no encontrado")))
                 .build();
