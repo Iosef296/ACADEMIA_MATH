@@ -2,8 +2,8 @@
 <div class="mb-6 bg-gradient-to-r from-violet-600 to-indigo-700 rounded-2xl p-6 text-white shadow-md">
   <div class="flex items-start justify-between mb-4">
     <div>
-      <h1 class="text-3xl font-bold">Temas 📚</h1>
-      <p class="text-violet-200 text-sm mt-1">Explora y aprende a tu ritmo</p>
+      <h1 class="text-3xl font-bold">Cursos 🎓</h1>
+      <p class="text-violet-200 text-sm mt-1">Elige un curso y explora sus temas</p>
     </div>
     <div class="flex items-center gap-3">
       <div class="bg-white bg-opacity-15 rounded-xl px-4 py-2 text-center">
@@ -20,7 +20,7 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        Nuevo tema
+        Nuevo curso
       </button>
     </div>
   </div>
@@ -173,16 +173,16 @@
         [ngClass]="isActuallyLocked(topic)
           ? 'bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none'
           : 'bg-gray-50 hover:bg-gray-100 text-gray-700'">
-        <span>{{ isActuallyLocked(topic) ? 'Bloqueado' : 'Explorar tema' }}</span>
+        <span>{{ isActuallyLocked(topic) ? 'Bloqueado' : 'Entrar al curso' }}</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
         </svg>
       </a>
 
-      <!-- Subtopics -->
+      <!-- Topics within course -->
       <div *ngIf="topic.children && topic.children.length > 0" class="mt-3 space-y-1">
         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-          {{ topic.children.length }} subtemas
+          {{ topic.children.length }} tema{{ topic.children.length !== 1 ? 's' : '' }}
         </p>
         <a *ngFor="let child of topic.children.slice(0, 3)"
           [routerLink]="isActuallyLocked(child) ? null : ['/topics', child.id]"
@@ -219,7 +219,7 @@
   (click)="showCreate = false">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
     (click)="$event.stopPropagation()">
-    <h3 class="font-semibold text-gray-900 mb-4">Nuevo tema</h3>
+    <h3 class="font-semibold text-gray-900 mb-4">{{ createForm.parent_id ? 'Nuevo tema' : 'Nuevo curso' }}</h3>
     <div class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Nombre *</label>
@@ -246,10 +246,10 @@
         </div>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">Tema padre (opcional)</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Pertenece al curso (opcional)</label>
         <select [(ngModel)]="createForm.parent_id"
           class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option [ngValue]="null">Ninguno (tema raíz)</option>
+          <option [ngValue]="null">Ninguno (es un curso)</option>
           <option *ngFor="let t of rootTopics" [ngValue]="t.id">{{ t.name }}</option>
         </select>
       </div>

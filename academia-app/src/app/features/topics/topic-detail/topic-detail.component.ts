@@ -78,6 +78,8 @@ export class TopicDetailComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  get isCourse(): boolean { return !!(this.topic?.children?.length); }
+
   get xpToNextLevel(): number {
     if (!this.progress) return 100;
     return 100 - (this.progress.xp % 100);

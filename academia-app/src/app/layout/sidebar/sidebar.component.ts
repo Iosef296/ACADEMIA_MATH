@@ -20,7 +20,7 @@ export class SidebarComponent implements OnInit {
 
   navItems: NavItem[] = [
     { label: 'Inicio', route: '/dashboard', icon: 'home' },
-    { label: 'Temas', route: '/topics', icon: 'topics' },
+    { label: 'Cursos', route: '/topics', icon: 'topics' },
     { label: 'Ejercicios', route: '/exercises', icon: 'exercises' },
     { label: 'Flashcards', route: '/exercises/flashcards', icon: 'flashcards' },
     { label: 'Exámenes', route: '/exams', icon: 'exams' },
