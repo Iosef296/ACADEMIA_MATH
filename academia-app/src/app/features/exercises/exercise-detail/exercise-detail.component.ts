@@ -75,6 +75,7 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
   variableValues: VariableValues = {};
   resolvedStatement = '';
 
+  siblingExercises: Exercise[] = [];
   loading = false;
   allDone = false;
   hintsUsed = 0;
@@ -136,13 +137,25 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
     private store: Store,
   ) {}
 
+  get siblingBasic()        { return this.siblingExercises.filter(e => e.difficulty?.toLowerCase() === 'basic'); }
+  get siblingIntermediate() { return this.siblingExercises.filter(e => e.difficulty?.toLowerCase() === 'intermediate'); }
+  get siblingAdvanced()     { return this.siblingExercises.filter(e => e.difficulty?.toLowerCase() === 'advanced'); }
+
   ngOnInit(): void {
     this.store.select(selectUserRole).pipe(takeUntil(this.destroy$)).subscribe((role) => {
       this.userRole = role;
       this.cdr.detectChanges();
     });
-    this.exerciseId = this.route.snapshot.paramMap.get('id') ?? '';
-    this.load();
+    this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      this.exerciseId = params.get('id') ?? '';
+      this.steps = [];
+      this.allDone = false;
+      this.showRating = false;
+      this.ratingSubmitted = false;
+      this.hintsUsed = 0;
+      this.startTime = Date.now();
+      this.load();
+    });
   }
 
   ngOnDestroy(): void {
@@ -206,6 +219,11 @@ export class ExerciseDetailComponent implements OnInit, OnDestroy {
       this.loading = false;
       this.cdr.detectChanges();
       if (this.isTeacher) this.loadVariables();
+      if (exercise?.topic?.id) {
+        this.api.get<Exercise[]>(`exercises?topicId=${exercise.topic.id}`)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({ next: list => { this.siblingExercises = list ?? []; this.cdr.detectChanges(); } });
+      }
     }).catch(() => {
       this.loading = false;
       this.cdr.detectChanges();

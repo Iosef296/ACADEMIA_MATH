@@ -6,7 +6,7 @@
   </svg>
 </div>
 
-<div *ngIf="!loading && exercise" class="max-w-3xl mx-auto">
+<div *ngIf="!loading && exercise" class="max-w-6xl mx-auto">
 
   <!-- Breadcrumb -->
   <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
@@ -22,6 +22,85 @@
     </svg>
     <span class="text-gray-900 font-medium">{{ exercise.title }}</span>
   </div>
+
+  <!-- Two-column layout -->
+  <div class="flex gap-5 items-start">
+
+  <!-- Sidebar: exercise list from same topic -->
+  <div *ngIf="siblingExercises.length > 0" class="w-56 shrink-0">
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-3 sticky top-4">
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+        {{ exercise.topic?.name }}
+      </p>
+
+      <!-- Básico -->
+      <div *ngIf="siblingBasic.length > 0" class="mb-3">
+        <div class="flex items-center gap-1.5 mb-1.5">
+          <span class="w-2 h-2 rounded-full bg-green-400 shrink-0"></span>
+          <span class="text-xs font-semibold text-gray-500">Básico</span>
+        </div>
+        <a *ngFor="let ex of siblingBasic"
+          [routerLink]="['/exercises', ex.id]"
+          class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition block mb-0.5"
+          [class.bg-blue-50]="ex.id === exerciseId"
+          [class.text-blue-700]="ex.id === exerciseId"
+          [class.font-semibold]="ex.id === exerciseId"
+          [class.text-gray-600]="ex.id !== exerciseId"
+          [class.hover:bg-gray-50]="ex.id !== exerciseId">
+          <span class="w-1.5 h-1.5 rounded-full shrink-0"
+            [class.bg-blue-500]="ex.id === exerciseId"
+            [class.bg-gray-300]="ex.id !== exerciseId"></span>
+          <span class="truncate">{{ ex.title }}</span>
+        </a>
+      </div>
+
+      <!-- Intermedio -->
+      <div *ngIf="siblingIntermediate.length > 0" class="mb-3">
+        <div class="flex items-center gap-1.5 mb-1.5">
+          <span class="w-2 h-2 rounded-full bg-yellow-400 shrink-0"></span>
+          <span class="text-xs font-semibold text-gray-500">Intermedio</span>
+        </div>
+        <a *ngFor="let ex of siblingIntermediate"
+          [routerLink]="['/exercises', ex.id]"
+          class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition block mb-0.5"
+          [class.bg-blue-50]="ex.id === exerciseId"
+          [class.text-blue-700]="ex.id === exerciseId"
+          [class.font-semibold]="ex.id === exerciseId"
+          [class.text-gray-600]="ex.id !== exerciseId"
+          [class.hover:bg-gray-50]="ex.id !== exerciseId">
+          <span class="w-1.5 h-1.5 rounded-full shrink-0"
+            [class.bg-blue-500]="ex.id === exerciseId"
+            [class.bg-gray-300]="ex.id !== exerciseId"></span>
+          <span class="truncate">{{ ex.title }}</span>
+        </a>
+      </div>
+
+      <!-- Avanzado -->
+      <div *ngIf="siblingAdvanced.length > 0">
+        <div class="flex items-center gap-1.5 mb-1.5">
+          <span class="w-2 h-2 rounded-full bg-red-400 shrink-0"></span>
+          <span class="text-xs font-semibold text-gray-500">Avanzado</span>
+        </div>
+        <a *ngFor="let ex of siblingAdvanced"
+          [routerLink]="['/exercises', ex.id]"
+          class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition block mb-0.5"
+          [class.bg-blue-50]="ex.id === exerciseId"
+          [class.text-blue-700]="ex.id === exerciseId"
+          [class.font-semibold]="ex.id === exerciseId"
+          [class.text-gray-600]="ex.id !== exerciseId"
+          [class.hover:bg-gray-50]="ex.id !== exerciseId">
+          <span class="w-1.5 h-1.5 rounded-full shrink-0"
+            [class.bg-blue-500]="ex.id === exerciseId"
+            [class.bg-gray-300]="ex.id !== exerciseId"></span>
+          <span class="truncate">{{ ex.title }}</span>
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main exercise content -->
+  <div class="flex-1 min-w-0">
 
   <!-- Exercise statement -->
   <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
@@ -665,6 +744,9 @@
 
     </div>
   </div>
+
+  </div><!-- /main content -->
+  </div><!-- /two-column layout -->
 
 </div>
 
