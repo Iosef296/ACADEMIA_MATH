@@ -86,7 +86,12 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
     this.user$.pipe(takeUntil(this.destroy$)).subscribe(user => {
       if (user) {
         this.currentUserId = user.id;
-        this.showMoodModal = localStorage.getItem(this.moodKey(user.id)) !== new Date().toDateString();
+        const today = new Date().toDateString();
+        // migrar key vieja a key por usuario
+        if (!localStorage.getItem(this.moodKey(user.id)) && localStorage.getItem('moodAnsweredDate') === today) {
+          localStorage.setItem(this.moodKey(user.id), today);
+        }
+        this.showMoodModal = localStorage.getItem(this.moodKey(user.id)) !== today;
         this.loadDashboard();
       }
     });

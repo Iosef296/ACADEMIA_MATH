@@ -77,6 +77,9 @@ export class AuthEffects {
         if (!token) return of(AuthActions.logout());
         if (!refresh) return of(AuthActions.logout());
         return this.api.get<any>('users/me').pipe(
+          retryWhen(errors => errors.pipe(
+            mergeMap((err, i) => i < 3 && err.status === 0 ? of(err).pipe(delay(3000)) : throwError(() => err)),
+          )),
           map((user) => AuthActions.setUser({ user, access_token: token, refresh_token: refresh })),
           catchError(() => of(AuthActions.logout())),
         );
