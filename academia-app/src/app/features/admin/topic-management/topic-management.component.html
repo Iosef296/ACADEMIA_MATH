@@ -4,7 +4,7 @@
   <div class="flex items-center justify-between mb-6">
     <div>
       <h1 class="text-2xl font-bold text-gray-900">Gestión de temas</h1>
-      <p class="text-sm text-gray-500 mt-1">{{ topics.length }} temas en total</p>
+      <p class="text-sm text-gray-500 mt-1">{{ totalTopics }} temas en total</p>
     </div>
     <button (click)="showCreate = true"
       class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold
@@ -59,9 +59,7 @@
       <button (click)="toggleLock(topic)"
         class="p-1 rounded transition shrink-0"
         [class.text-amber-500]="topic.is_locked"
-        [class.hover:text-amber-700]="topic.is_locked"
         [class.text-gray-300]="!topic.is_locked"
-        [class.hover:text-gray-500]="!topic.is_locked"
         title="{{ topic.is_locked ? 'Desbloquear' : 'Bloquear' }}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path *ngIf="topic.is_locked" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -71,23 +69,26 @@
         </svg>
       </button>
 
-      <!-- Name / edit -->
+      <!-- Name + badges -->
       <div class="flex-1 min-w-0">
-        <span *ngIf="editingId !== topic.id"
-          class="text-sm font-medium text-gray-900">
-          {{ topic.name }}
-          <span *ngIf="topic.is_locked" class="text-xs text-amber-500 ml-1">(bloqueado)</span>
-        </span>
-        <input *ngIf="editingId === topic.id"
-          [(ngModel)]="editingName" type="text"
-          (keyup.enter)="saveTopic(topic)"
-          (keyup.escape)="cancelEdit()"
-          class="w-full px-3 py-1.5 border border-blue-300 rounded-lg text-sm
-            focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-sm font-medium text-gray-900">{{ topic.name }}</span>
+          <span class="text-xs px-1.5 py-0.5 rounded-full font-medium" [ngClass]="difficultyColor(topic.difficulty)">
+            {{ difficultyLabel(topic.difficulty) }}
+          </span>
+          <span *ngIf="topic.is_locked" class="text-xs text-amber-500">(bloqueado)</span>
+          <span *ngIf="topic.prerequisite_ids?.length" class="text-xs text-gray-400">
+            · {{ topic.prerequisite_ids.length }} prerequisito{{ topic.prerequisite_ids.length !== 1 ? 's' : '' }}
+          </span>
+          <span *ngIf="topic.estimated_minutes" class="text-xs text-gray-400">
+            · {{ topic.estimated_minutes }} min
+          </span>
+        </div>
+        <p *ngIf="topic.description" class="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{{ topic.description }}</p>
       </div>
 
       <!-- Children count -->
-      <span *ngIf="topic.children && topic.children.length > 0 && editingId !== topic.id"
+      <span *ngIf="topic.children && topic.children.length > 0"
         class="text-xs text-gray-400 shrink-0">
         {{ topic.children.length }} subtema{{ topic.children.length !== 1 ? 's' : '' }}
       </span>
@@ -95,7 +96,7 @@
       <!-- Actions -->
       <div class="flex items-center gap-1 shrink-0">
 
-        <ng-container *ngIf="editingId !== topic.id && confirmDeleteId !== topic.id">
+        <ng-container *ngIf="confirmDeleteId !== topic.id">
           <button (click)="startEdit(topic)"
             class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
             title="Editar">
@@ -110,26 +111,6 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-            </svg>
-          </button>
-        </ng-container>
-
-        <!-- Save / cancel edit -->
-        <ng-container *ngIf="editingId === topic.id">
-          <button (click)="saveTopic(topic)" [disabled]="savingId === topic.id"
-            class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition disabled:opacity-50">
-            <svg *ngIf="savingId !== topic.id" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-            </svg>
-            <svg *ngIf="savingId === topic.id" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-          </button>
-          <button (click)="cancelEdit()"
-            class="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </ng-container>
@@ -159,32 +140,72 @@
 
 </ng-template>
 
-<!-- Create modal -->
+<!-- ===== Create Modal ===== -->
 <div *ngIf="showCreate"
   class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
   (click)="showCreate = false">
 
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
     (click)="$event.stopPropagation()">
 
     <h3 class="font-semibold text-gray-900 mb-4">Nuevo tema</h3>
 
     <div class="space-y-4">
+      <!-- Name -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">Nombre del tema</label>
-        <input [(ngModel)]="newName" type="text" placeholder="Ej: Álgebra lineal"
-          class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm
-            focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Nombre *</label>
+        <input [(ngModel)]="createForm.name" type="text" placeholder="Ej: Álgebra lineal"
+          class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
       </div>
 
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
+        <textarea [(ngModel)]="createForm.description" rows="2" placeholder="Descripción breve..."
+          class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+      </div>
+
+      <!-- Difficulty + Minutes -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Dificultad</label>
+          <select [(ngModel)]="createForm.difficulty"
+            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option *ngFor="let d of difficulties" [value]="d.value">{{ d.label }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Minutos estimados</label>
+          <input [(ngModel)]="createForm.estimated_minutes" type="number" min="0"
+            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+      </div>
+
+      <!-- Parent -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Tema padre (opcional)</label>
-        <select [(ngModel)]="newParentId"
-          class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white
-            focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <select [(ngModel)]="createForm.parent_id"
+          class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
           <option [ngValue]="null">Ninguno (tema raíz)</option>
           <option *ngFor="let t of rootTopics" [ngValue]="t.id">{{ t.name }}</option>
         </select>
+      </div>
+
+      <!-- Prerequisites -->
+      <div *ngIf="allTopics.length > 0">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Prerequisitos (sucesión)</label>
+        <div class="border border-gray-200 rounded-lg max-h-36 overflow-y-auto p-2 space-y-1">
+          <label *ngFor="let t of allTopics"
+            class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">
+            <input type="checkbox"
+              [checked]="createForm.prerequisite_ids.includes(t.id)"
+              (change)="togglePrereq(createForm.prerequisite_ids, t.id)"
+              class="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded"/>
+            <span class="text-sm text-gray-700">{{ t.name }}</span>
+            <span class="text-xs ml-auto px-1.5 py-0.5 rounded-full" [ngClass]="difficultyColor(t.difficulty)">{{ difficultyLabel(t.difficulty) }}</span>
+          </label>
+        </div>
+        <p class="text-xs text-gray-400 mt-1">El estudiante debe completar estos temas antes de acceder a éste.</p>
       </div>
     </div>
 
@@ -193,7 +214,7 @@
         class="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
         Cancelar
       </button>
-      <button (click)="create()" [disabled]="creating || !newName.trim()"
+      <button (click)="create()" [disabled]="creating || !createForm.name.trim()"
         class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white
           text-sm font-semibold rounded-lg transition flex items-center gap-2">
         <svg *ngIf="creating" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
@@ -201,6 +222,97 @@
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
         </svg>
         {{ creating ? 'Creando...' : 'Crear tema' }}
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== Edit Modal ===== -->
+<div *ngIf="showEdit && editingTopic"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+  (click)="cancelEdit()">
+
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
+    (click)="$event.stopPropagation()">
+
+    <h3 class="font-semibold text-gray-900 mb-4">Editar: {{ editingTopic.name }}</h3>
+
+    <div class="space-y-4">
+      <!-- Name -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Nombre *</label>
+        <input [(ngModel)]="editForm.name" type="text"
+          class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
+        <textarea [(ngModel)]="editForm.description" rows="2" placeholder="Descripción breve..."
+          class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+      </div>
+
+      <!-- Difficulty + Minutes -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Dificultad</label>
+          <select [(ngModel)]="editForm.difficulty"
+            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option *ngFor="let d of difficulties" [value]="d.value">{{ d.label }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Minutos estimados</label>
+          <input [(ngModel)]="editForm.estimated_minutes" type="number" min="0"
+            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+      </div>
+
+      <!-- Parent -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Tema padre</label>
+        <select [(ngModel)]="editForm.parent_id"
+          class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option [ngValue]="null">Ninguno (tema raíz)</option>
+          <option *ngFor="let t of rootTopics" [ngValue]="t.id"
+            [disabled]="t.id === editingTopic.id">{{ t.name }}</option>
+        </select>
+      </div>
+
+      <!-- Prerequisites -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Prerequisitos (sucesión)</label>
+        <div class="border border-gray-200 rounded-lg max-h-36 overflow-y-auto p-2 space-y-1">
+          <p *ngIf="prereqOptions(editingTopic.id).length === 0"
+            class="text-xs text-gray-400 px-2 py-1">No hay otros temas disponibles.</p>
+          <label *ngFor="let t of prereqOptions(editingTopic.id)"
+            class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">
+            <input type="checkbox"
+              [checked]="editForm.prerequisite_ids.includes(t.id)"
+              (change)="togglePrereq(editForm.prerequisite_ids, t.id)"
+              class="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded"/>
+            <span class="text-sm text-gray-700">{{ t.name }}</span>
+            <span class="text-xs ml-auto px-1.5 py-0.5 rounded-full" [ngClass]="difficultyColor(t.difficulty)">{{ difficultyLabel(t.difficulty) }}</span>
+          </label>
+        </div>
+        <p class="text-xs text-gray-400 mt-1">El estudiante debe completar estos temas antes de acceder a éste.</p>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 mt-5">
+      <button (click)="cancelEdit()"
+        class="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+        Cancelar
+      </button>
+      <button (click)="saveTopic()" [disabled]="saving || !editForm.name.trim()"
+        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white
+          text-sm font-semibold rounded-lg transition flex items-center gap-2">
+        <svg *ngIf="saving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        {{ saving ? 'Guardando...' : 'Guardar cambios' }}
       </button>
     </div>
 

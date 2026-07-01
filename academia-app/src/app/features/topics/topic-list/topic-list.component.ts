@@ -9,6 +9,9 @@ interface Topic {
   description: string;
   order: number;
   is_locked: boolean;
+  difficulty: string;
+  estimated_minutes: number;
+  prerequisite_ids: string[];
   children?: Topic[];
 }
 
@@ -30,6 +33,7 @@ export class TopicListComponent implements OnInit, OnDestroy {
   loading = false;
   error = '';
   searchQuery = '';
+  activeTab: 'todos' | 'basico' | 'intermedio' | 'avanzado' = 'todos';
   Math = Math;
 
   private destroy$ = new Subject<void>();
@@ -85,14 +89,54 @@ export class TopicListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  get filtered(): Topic[] {
-    if (!this.searchQuery.trim()) return this.topics;
-    const q = this.searchQuery.toLowerCase();
-    return this.topics.filter(
-      t => t.name.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q)
-        || t.children?.some(c => c.name.toLowerCase().includes(q))
-    );
+  get allTopicsFlat(): Topic[] {
+    const flat: Topic[] = [];
+    const recurse = (list: Topic[]) => {
+      for (const t of list) {
+        flat.push(t);
+        if (t.children?.length) recurse(t.children);
+      }
+    };
+    recurse(this.topics);
+    return flat;
   }
+
+  topicById(id: string): Topic | undefined {
+    return this.allTopicsFlat.find(t => t.id === id);
+  }
+
+  isSuccessionLocked(topic: Topic): boolean {
+    if (!topic.prerequisite_ids?.length) return false;
+    return topic.prerequisite_ids.some(prereqId => {
+      const prereq = this.topicById(prereqId);
+      if (!prereq) return false;
+      const progress = this.getProgress(prereq.name);
+      return !progress || progress.exercises_solved === 0;
+    });
+  }
+
+  isActuallyLocked(topic: Topic): boolean {
+    return !!topic.is_locked || this.isSuccessionLocked(topic);
+  }
+
+  get filtered(): Topic[] {
+    let list = this.topics;
+    if (this.searchQuery.trim()) {
+      const q = this.searchQuery.toLowerCase();
+      list = list.filter(
+        t => t.name.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q)
+          || t.children?.some(c => c.name.toLowerCase().includes(q))
+      );
+    }
+    if (this.activeTab !== 'todos') {
+      list = list.filter(t => (t.difficulty || 'basico') === this.activeTab);
+    }
+    return list;
+  }
+
+  get basicTopics(): Topic[]        { return this.topics.filter(t => !t.difficulty || t.difficulty === 'basico'); }
+  get intermediateTopics(): Topic[] { return this.topics.filter(t => t.difficulty === 'intermedio'); }
+  get advancedTopics(): Topic[]     { return this.topics.filter(t => t.difficulty === 'avanzado'); }
 
   getColor(index: number): string {
     return this.colorPalette[index % this.colorPalette.length];
@@ -108,6 +152,16 @@ export class TopicListComponent implements OnInit, OnDestroy {
 
   getProgress(name: string): ProgressSummary | null {
     return this.progressMap.get(name.toLowerCase()) ?? null;
+  }
+
+  difficultyBadge(diff: string): { label: string; cls: string } {
+    if (diff === 'avanzado')   return { label: 'Avanzado',   cls: 'bg-red-100 text-red-700' };
+    if (diff === 'intermedio') return { label: 'Intermedio', cls: 'bg-yellow-100 text-yellow-700' };
+    return { label: 'Básico', cls: 'bg-green-100 text-green-700' };
+  }
+
+  setTab(value: string): void {
+    this.activeTab = value as 'todos' | 'basico' | 'intermedio' | 'avanzado';
   }
 
   get totalTopics(): number { return this.topics.length; }

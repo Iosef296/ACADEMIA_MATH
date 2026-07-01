@@ -42,6 +42,9 @@ public class TopicServiceImpl implements TopicService {
     @Override
     @Transactional
     public TopicResponse create(TopicRequest request) {
+        if (request.getName() == null || request.getName().isBlank()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "El nombre del tema es requerido");
+        }
         Topic topic = Topic.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -50,9 +53,13 @@ public class TopicServiceImpl implements TopicService {
                 .isLocked(request.getIsLocked() != null ? request.getIsLocked() : false)
                 .unlockCondition(request.getUnlockCondition())
                 .estimatedMinutes(request.getEstimatedMinutes() != null ? request.getEstimatedMinutes() : 0)
+                .difficulty(request.getDifficulty() != null ? request.getDifficulty() : "basico")
                 .build();
         if (request.getParentId() != null) {
             topic.setParent(find(request.getParentId()));
+        }
+        if (request.getPrerequisiteIds() != null) {
+            request.getPrerequisiteIds().forEach(prereqId -> topic.getPrerequisites().add(find(prereqId)));
         }
         return toResponse(topicRepository.save(topic));
     }
@@ -61,17 +68,28 @@ public class TopicServiceImpl implements TopicService {
     @Transactional
     public TopicResponse update(UUID id, TopicRequest request) {
         Topic topic = find(id);
-        topic.setName(request.getName());
+        if (request.getName() != null && !request.getName().isBlank()) {
+            topic.setName(request.getName());
+        }
         if (request.getDescription() != null) topic.setDescription(request.getDescription());
         if (request.getImageUrl() != null) topic.setImageUrl(request.getImageUrl());
         if (request.getTopicOrder() != null) topic.setTopicOrder(request.getTopicOrder());
         if (request.getIsLocked() != null) topic.setIsLocked(request.getIsLocked());
         if (request.getUnlockCondition() != null) topic.setUnlockCondition(request.getUnlockCondition());
         if (request.getEstimatedMinutes() != null) topic.setEstimatedMinutes(request.getEstimatedMinutes());
+        if (request.getDifficulty() != null) topic.setDifficulty(request.getDifficulty());
         if (request.getParentId() != null) {
             topic.setParent(find(request.getParentId()));
-        } else {
+        } else if (request.getParentId() == null && request.getName() != null) {
             topic.setParent(null);
+        }
+        if (request.getPrerequisiteIds() != null) {
+            topic.getPrerequisites().clear();
+            request.getPrerequisiteIds().forEach(prereqId -> {
+                if (!prereqId.equals(topic.getId())) {
+                    topic.getPrerequisites().add(find(prereqId));
+                }
+            });
         }
         return toResponse(topicRepository.save(topic));
     }
@@ -119,6 +137,7 @@ public class TopicServiceImpl implements TopicService {
                 .topicOrder(topic.getTopicOrder())
                 .isLocked(topic.getIsLocked())
                 .estimatedMinutes(topic.getEstimatedMinutes())
+                .difficulty(topic.getDifficulty())
                 .prerequisiteIds(prereqIds)
                 .children(topic.getChildren() != null
                         ? topic.getChildren().stream().map(this::toResponse).toList()

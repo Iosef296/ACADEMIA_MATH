@@ -54,4 +54,8 @@ public class Topic {
     @Column(name = "estimated_minutes")
     @Builder.Default
     private Integer estimatedMinutes = 0;
+
+    @Column(name = "difficulty", length = 20)
+    @Builder.Default
+    private String difficulty = "basico";
 }
